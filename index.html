@@ -13,6 +13,7 @@
 
   <style>
     :root {
+      --header-bg: #eaf1f9;
       --pantone-blue: #0c2340;
       --pantone-blue-light: #163a66;
       --accent-gray: #f4f6f8;
@@ -40,47 +41,45 @@
       min-height: 100vh;
     }
 
-    /* Cabecera */
+    /* Cabecera con contraste suave para el logo */
     .header-bar {
-      background: var(--pantone-blue);
-      color: var(--white);
-      padding: 18px 36px;
+      background: var(--header-bg);
+      color: var(--pantone-blue);
+      padding: 18px 40px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 3px solid var(--pantone-blue-light);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      border-bottom: 2px solid #cbd5e1;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
     }
 
     .header-titles h1 {
-      font-size: 1.22rem;
+      font-size: 1.25rem;
       font-weight: 700;
       letter-spacing: 0.5px;
       text-transform: uppercase;
+      color: var(--pantone-blue);
       margin-bottom: 2px;
     }
 
     .header-titles h2 {
       font-size: 0.92rem;
-      font-weight: 500;
-      color: #cbd5e1;
+      font-weight: 600;
+      color: #334155;
       text-transform: uppercase;
     }
 
     .header-titles .org-name {
       font-size: 0.85rem;
-      font-weight: 400;
-      color: #94a3b8;
+      font-weight: 500;
+      color: #64748b;
       margin-top: 2px;
     }
 
     .header-logo img {
-      max-height: 52px;
-      max-width: 175px;
+      max-height: 58px;
+      max-width: 185px;
       object-fit: contain;
-      background: white;
-      padding: 4px 8px;
-      border-radius: 4px;
     }
 
     .container {
@@ -223,9 +222,10 @@
 
     .field-group .static-text {
       padding: 7px 0;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       font-weight: 600;
       color: var(--text-dark);
+      word-break: break-word;
     }
 
     .topic-card {
@@ -534,6 +534,7 @@
         Diligencie únicamente los campos resaltados en amarillo para completar su evaluación
       </div>
 
+      <!-- Ficha de Datos de la Evaluación -->
       <div class="candidate-card">
         <div class="candidate-card-title">Datos del Candidato y Evaluación</div>
         <div class="grid-fields">
@@ -557,9 +558,9 @@
             <label>Fecha de Aplicación</label>
             <div class="static-text" id="labelFecha"></div>
           </div>
-          <div class="field-group">
-            <label>Temas Evaluados</label>
-            <div class="static-text" id="labelTemas"></div>
+          <div class="field-group" style="grid-column: 1 / -1;">
+            <label>Skills Evaluados</label>
+            <div class="static-text" id="labelSkills"></div>
           </div>
         </div>
       </div>
@@ -617,6 +618,24 @@
       { min: 0.00, label: "REQUIERE REFUERZO", css: "concept-refuerzo" }
     ];
 
+    // Leer parámetros de la URL para auto-completar datos desde n8n / Supabase
+    function populateFromUrlParams() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("candidato") || params.get("nombre")) {
+        document.getElementById("inputCandidato").value = params.get("candidato") || params.get("nombre");
+      }
+      if (params.get("correo") || params.get("email")) {
+        document.getElementById("inputCorreo").value = params.get("correo") || params.get("email");
+      }
+      if (params.get("cargo") || params.get("vacante")) {
+        document.getElementById("inputCargo").value = params.get("cargo") || params.get("vacante");
+      }
+      if (params.get("evaluador") || params.get("reclutador")) {
+        document.getElementById("inputEvaluador").value = params.get("evaluador") || params.get("reclutador");
+      }
+    }
+
+    // Pre-cargar logo como DataURL para inserción limpia en PDF
     let logoDataUrl = null;
     (function preloadLogo() {
       const img = new Image();
@@ -635,6 +654,8 @@
       };
       img.src = "https://sistemas359.github.io/SIstemasGLC/flores-la-conchita-nuevo%20(1).png";
     })();
+
+    window.addEventListener("DOMContentLoaded", populateFromUrlParams);
 
     const dropZone = document.getElementById("dropZone");
     const fileInput = document.getElementById("fileInput");
@@ -675,6 +696,7 @@
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.load(buffer);
 
+        // 1. Detectar temas aplicados según hojas visibles
         const visibleTemas = new Set();
         workbook.worksheets.forEach(ws => {
           const match = ws.name.toUpperCase().match(/H0([1-9])/);
@@ -684,6 +706,7 @@
         });
         state.temasAplicados = [...visibleTemas].sort();
 
+        // 2. Buscar hoja RESULTADOS
         const wsResultados = workbook.worksheets.find(ws =>
           ws.name.toLowerCase().includes("resultados")
         );
@@ -692,6 +715,7 @@
           throw new Error("No se encontró la hoja RESULTADOS en el archivo de Excel.");
         }
 
+        // 3. Parsear ejercicios
         state.temas = parseWorksheetResultados(wsResultados, visibleTemas);
 
         if (state.temas.length === 0) {
@@ -794,8 +818,10 @@
       });
 
       document.getElementById("labelFecha").textContent = today;
-      document.getElementById("labelTemas").textContent =
-        state.temas.length + " tema(s) (" + state.temas.map(t => t.codigo).join(", ") + ")";
+      
+      // Mostrar nombres de los temas evaluados (no solo H0X)
+      const skillsList = state.temas.map(t => t.nombre).join(" • ");
+      document.getElementById("labelSkills").textContent = skillsList || "Ninguno especificado";
 
       const topicsContainer = document.getElementById("topicsContainer");
       topicsContainer.innerHTML = state.temas.map((tema, tIdx) => buildTopicCard(tema, tIdx)).join("");
@@ -906,6 +932,12 @@
       const fechaAplicacion = document.getElementById("labelFecha").textContent;
       const observaciones = document.getElementById("observacionesGenerales").value.trim() || "Sin observaciones.";
 
+      // Fecha y hora exacta de generación
+      const now = new Date();
+      const fechaHoraGeneracion = now.toLocaleDateString("es-CO", {
+        year: "numeric", month: "2-digit", day: "2-digit"
+      }) + " " + now.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
       let grandObtained = 0;
       let grandMax = 0;
       const summaryRows = [];
@@ -921,6 +953,7 @@
             : ej.ptAuto;
           topicObtained += score;
 
+          // En el PDF, ambos son texto normal uniforme
           detailRows.push([
             tema.codigo,
             ej.desc.length > 60 ? ej.desc.substring(0, 58) + "..." : ej.desc,
@@ -941,66 +974,81 @@
       const nivel = NIVELES.find(n => ratio >= n.min) || NIVELES[NIVELES.length - 1];
 
       const pantoneRGB = [12, 35, 64];
+      const lightBlueRGB = [234, 241, 249];
 
-      /* Página 1: Cabecera y Resumen */
-      doc.setFillColor(...pantoneRGB);
-      doc.rect(0, 0, 210, 32, "F");
+      /* Página 1: Cabecera con contraste suave y elegante */
+      doc.setFillColor(...lightBlueRGB);
+      doc.rect(0, 0, 210, 34, "F");
+
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.6);
+      doc.line(0, 34, 210, 34);
 
       if (logoDataUrl) {
         try {
-          doc.addImage(logoDataUrl, "PNG", 14, 6, 38, 20);
+          doc.addImage(logoDataUrl, "PNG", 14, 5, 38, 22);
         } catch(e) {
           console.warn("Logo en PDF omitido:", e);
         }
       }
 
-      doc.setTextColor(255, 255, 255);
+      doc.setTextColor(...pantoneRGB);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(10.5);
       doc.text("INFORME DE APLICACIÓN DE PRUEBA DE CONOCIMIENTO DE EXCEL", logoDataUrl ? 58 : 105, 12, { align: logoDataUrl ? "left" : "center" });
 
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(51, 65, 85);
       doc.text("Selección, Bienestar y Capacitación", logoDataUrl ? 58 : 105, 18, { align: logoDataUrl ? "left" : "center" });
+      doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
-      doc.setTextColor(203, 213, 225);
+      doc.setTextColor(100, 116, 139);
       doc.text("Grupo La Conchita", logoDataUrl ? 58 : 105, 24, { align: logoDataUrl ? "left" : "center" });
 
-      let currentY = 38;
+      // Fecha y hora en cabecera superior derecha
+      doc.setFontSize(6.8);
+      doc.setTextColor(100, 116, 139);
+      doc.text("Generado: " + fechaHoraGeneracion, 196, 30, { align: "right" });
+
+      let currentY = 40;
 
       /* Tarjeta de Datos */
       doc.setFillColor(248, 250, 252);
       doc.setDrawColor(209, 213, 219);
-      doc.roundedRect(14, currentY, 182, 34, 2, 2, "FD");
+      doc.roundedRect(14, currentY, 182, 38, 2, 2, "FD");
 
       doc.setTextColor(12, 35, 64);
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(8.5);
+      doc.setFontSize(8);
 
-      doc.text("Nombre Candidato:", 18, currentY + 8);
-      doc.text("Cargo al que Aspira:", 18, currentY + 16);
-      doc.text("Quién Evalúa:", 18, currentY + 24);
+      doc.text("Nombre Candidato:", 18, currentY + 7);
+      doc.text("Cargo al que Aspira:", 18, currentY + 15);
+      doc.text("Quién Evalúa:", 18, currentY + 23);
+      doc.text("Skills Evaluados:", 18, currentY + 31);
 
-      doc.text("Correo Electrónico:", 110, currentY + 8);
-      doc.text("Fecha de Aplicación:", 110, currentY + 16);
-      doc.text("Temas Evaluados:", 110, currentY + 24);
+      doc.text("Correo Electrónico:", 110, currentY + 7);
+      doc.text("Fecha de Aplicación:", 110, currentY + 15);
 
       doc.setFont("helvetica", "normal");
       doc.setTextColor(51, 65, 85);
 
-      doc.text(nombreCandidato, 48, currentY + 8);
-      doc.text(cargoAspira, 50, currentY + 16);
-      doc.text(quienEvalua, 42, currentY + 24);
+      doc.text(nombreCandidato, 48, currentY + 7);
+      doc.text(cargoAspira, 50, currentY + 15);
+      doc.text(quienEvalua, 42, currentY + 23);
 
-      doc.text(correoElectronico, 142, currentY + 8);
-      doc.text(fechaAplicacion, 142, currentY + 16);
-      doc.text(state.temas.map(t => t.codigo).join(", "), 140, currentY + 24);
+      const skillsPdfText = state.temas.map(t => t.nombre).join(", ");
+      const splitSkills = doc.splitTextToSize(skillsPdfText, 140);
+      doc.text(splitSkills, 45, currentY + 31);
 
-      currentY += 40;
+      doc.text(correoElectronico, 142, currentY + 7);
+      doc.text(fechaAplicacion, 142, currentY + 15);
+
+      currentY += 44;
 
       /* Tabla de Competencias */
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(9.5);
+      doc.setFontSize(9);
       doc.setTextColor(12, 35, 64);
       doc.text("RESULTADOS POR COMPETENCIA EVALUADA", 14, currentY);
       currentY += 3;
@@ -1107,6 +1155,7 @@
 
       currentY += 9;
 
+      // Tabla sin colores amarillos en Manual (texto uniforme)
       doc.autoTable({
         startY: currentY,
         head: [["Tema", "Ejercicio / Criterio Evaluado", "Tipo", "Pts.", "Máx."]],
@@ -1129,23 +1178,17 @@
           3: { halign: "center", cellWidth: 15 },
           4: { halign: "center", cellWidth: 15 }
         },
-        didParseCell: function(data) {
-          if (data.section === "body" && data.column.index === 2 && data.cell.raw === "Manual") {
-            data.cell.styles.fillColor = [254, 243, 199];
-            data.cell.styles.textColor = [146, 64, 14];
-            data.cell.styles.fontStyle = "bold";
-          }
-        },
         margin: { left: 14, right: 14 }
       });
 
+      /* Pie de página en todas las páginas */
       const pageCount = doc.getNumberOfPages();
       for (let p = 1; p <= pageCount; p++) {
         doc.setPage(p);
-        doc.setFontSize(7);
+        doc.setFontSize(7.5);
         doc.setTextColor(148, 163, 184);
         doc.text(
-          "Grupo La Conchita — Informe de Evaluación de Excel — Página " + p + " de " + pageCount,
+          "Grupo La Conchita — Informe de Evaluación de Excel — " + nombreCandidato + " — Página " + p + " de " + pageCount,
           105, 290, { align: "center" }
         );
       }
@@ -1173,6 +1216,7 @@
       state.candidateName = "";
       state.temas = [];
       state.temasAplicados = [];
+      populateFromUrlParams();
     }
   </script>
 </body>
