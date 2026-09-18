@@ -1,490 +1,1179 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Panel de Calificacion - Prueba Excel</title>
+  <title>Evaluación de Prueba de Conocimiento de Excel — Grupo La Conchita</title>
+
+  <!-- ExcelJS: Lectura de archivos Excel en el cliente -->
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <!-- jsPDF + AutoTable: Generación de informes PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
   <style>
-    :root{--primary:#1a1a2e;--accent:#0f3460;--green:#2d6a4f;--green-light:#e8f5e9;--yellow:#fffde7;--yellow-bd:#e6a817;--red:#e63946;--text:#333;--muted:#666;--border:#dee2e6;--bg:#f4f6f9;--white:#fff}
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-    .page-header{background:var(--primary);color:#fff;padding:18px 40px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 10px rgba(0,0,0,.35)}
-    .page-header .icon{font-size:2em}
-    .page-header h1{font-size:1.3em;font-weight:700}
-    .page-header p{font-size:.82em;opacity:.75;margin-top:2px}
-    .container{max-width:1120px;margin:0 auto;padding:30px 20px}
-    #dropZone{background:var(--white);border:3px dashed var(--accent);border-radius:14px;padding:56px 30px;text-align:center;cursor:pointer;transition:background .25s,border-color .25s}
-    #dropZone:hover,#dropZone.drag-over{background:#e8eeff;border-color:var(--red)}
-    #dropZone .dz-icon{font-size:3.5em;margin-bottom:12px}
-    #dropZone h2{color:var(--accent);font-size:1.2em;margin-bottom:8px}
-    #dropZone p{color:var(--muted);font-size:.9em}
-    #dropZone p.hint{margin-top:6px;font-size:.8em;color:#aaa}
-    #fileInput{display:none}
-    .btn-upload{display:inline-block;margin-top:18px;padding:10px 26px;background:var(--accent);color:#fff;border-radius:8px;font-weight:600;font-size:.95em;cursor:pointer;border:none}
-    .btn-upload:hover{background:var(--primary)}
-    #loading{display:none;text-align:center;padding:60px 20px}
-    .spinner{width:52px;height:52px;border:5px solid #e0e0e0;border-top-color:var(--accent);border-radius:50%;animation:spin .75s linear infinite;margin:0 auto 16px}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    #panel{display:none}
-    .candidate-bar{background:var(--primary);color:#fff;border-radius:10px;padding:16px 24px;display:flex;align-items:center;gap:28px;margin-bottom:20px;flex-wrap:wrap}
-    .cbar-item{display:flex;flex-direction:column}
-    .cbar-label{font-size:.68em;opacity:.65;text-transform:uppercase;letter-spacing:1px}
-    .cbar-value{font-size:.97em;font-weight:600;margin-top:3px}
-    input.cbar-input{background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,.45);color:#fff;font-size:.97em;font-weight:600;outline:none;width:220px}
-    input.cbar-input::placeholder{color:rgba(255,255,255,.45)}
-    .alert-pending{background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px 16px;font-size:.86em;color:#856404;margin-bottom:18px;display:flex;align-items:center;gap:8px}
-    .section-card{background:var(--white);border-radius:10px;margin-bottom:14px;box-shadow:0 2px 7px rgba(0,0,0,.07);border:1px solid var(--border);overflow:hidden}
-    .section-head{background:var(--primary);color:#fff;padding:11px 18px;display:flex;align-items:center;justify-content:space-between}
-    .section-head h3{font-size:.92em;font-weight:600}
-    .total-badge{background:var(--green);color:#fff;padding:3px 12px;border-radius:20px;font-size:.82em;font-weight:700;white-space:nowrap}
-    .ex-table{width:100%;border-collapse:collapse;font-size:.85em}
-    .ex-table thead tr{background:#f0f2f5;color:var(--muted);font-size:.75em;text-transform:uppercase;letter-spacing:.4px}
-    .ex-table th,.ex-table td{padding:9px 13px;border-bottom:1px solid #f0f0f0;text-align:left;vertical-align:middle}
-    .ex-table th:not(:first-child),.ex-table td:not(:first-child){text-align:center}
-    .ex-table th:first-child{width:46%}
-    .row-auto td{background:#fff}
-    .row-manual td{background:var(--yellow)}
-    .row-manual td:first-child{border-left:3px solid var(--yellow-bd)}
-    .row-total td{background:var(--green-light);font-weight:700;color:var(--green);border-top:2px solid #a5d6a7}
-    .badge{border-radius:12px;padding:2px 9px;font-size:.76em;font-weight:600}
-    .badge-auto{background:#e3f2fd;color:#1565c0}
-    .badge-manual{background:#fff3cd;color:#856404}
-    .manual-input{width:62px;padding:4px 6px;border:2px solid var(--yellow-bd);border-radius:6px;text-align:center;font-weight:700;font-size:.94em;background:#fffde7;outline:none;transition:border-color .2s}
-    .manual-input:focus{border-color:var(--accent);background:#fff}
-    .summary-card{background:var(--white);border-radius:10px;margin-top:22px;box-shadow:0 2px 7px rgba(0,0,0,.07);border:1px solid var(--border);overflow:hidden}
-    .summary-head{background:var(--primary);color:#fff;padding:13px 20px;font-weight:700;font-size:.95em;text-transform:uppercase;letter-spacing:.4px}
-    .sum-table{width:100%;border-collapse:collapse;font-size:.9em}
-    .sum-table th{background:#f0f2f5;padding:9px 16px;text-align:center;color:var(--muted);font-size:.77em;text-transform:uppercase}
-    .sum-table th:first-child{text-align:left}
-    .sum-table td{padding:9px 16px;border-bottom:1px solid #f0f0f0;text-align:center}
-    .sum-table td:first-child{text-align:left;font-weight:500}
-    .sum-table .foot-total td{background:var(--green-light);font-weight:700;color:var(--green);border-top:2px solid #a5d6a7}
-    .concepto-bar{display:flex;align-items:center;gap:14px;padding:14px 20px;flex-wrap:wrap}
-    .concepto-bar strong{color:var(--primary);font-size:.97em}
-    .nivel-pill{padding:5px 16px;border-radius:20px;font-weight:700;font-size:.88em}
-    .nivel-avanzado{background:#c8e6c9;color:#1b5e20}
-    .nivel-intermedio{background:#fff9c4;color:#f57f17}
-    .nivel-refuerzo{background:#ffcdd2;color:#b71c1c}
-    .concepto-pct{color:var(--muted);font-size:.88em}
-    .obs-box{background:var(--white);border-radius:10px;padding:20px 24px;margin-top:14px;box-shadow:0 2px 7px rgba(0,0,0,.07);border:1px solid var(--border)}
-    .obs-box h3{color:var(--primary);font-size:.9em;text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px}
-    .obs-box textarea{width:100%;min-height:90px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.9em;resize:vertical;outline:none;transition:border-color .2s;color:var(--text)}
-    .obs-box textarea:focus{border-color:var(--accent)}
-    .actions-bar{display:flex;align-items:center;justify-content:space-between;margin-top:22px;padding:4px 0 16px;flex-wrap:wrap;gap:12px}
-    .btn{padding:12px 28px;border-radius:8px;font-size:.95em;font-weight:700;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:8px;transition:transform .15s,background .2s}
-    .btn:hover{transform:translateY(-2px)}
-    .btn-reset{background:var(--white);color:var(--primary);border:2px solid var(--primary)}
-    .btn-reset:hover{background:var(--bg)}
-    .btn-pdf{background:var(--red);color:#fff;box-shadow:0 3px 10px rgba(230,57,70,.35)}
-    .btn-pdf:hover{background:#c1121f}
+    :root {
+      --pantone-blue: #0c2340;
+      --pantone-blue-light: #163a66;
+      --accent-gray: #f4f6f8;
+      --border-color: #d1d5db;
+      --text-dark: #1f2937;
+      --text-muted: #4b5563;
+      --yellow-manual: #fff9db;
+      --yellow-border: #f59f00;
+      --green-total: #e6f4ea;
+      --green-dark: #137333;
+      --white: #ffffff;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+      background: var(--accent-gray);
+      color: var(--text-dark);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* Cabecera */
+    .header-bar {
+      background: var(--pantone-blue);
+      color: var(--white);
+      padding: 18px 36px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 3px solid var(--pantone-blue-light);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    .header-titles h1 {
+      font-size: 1.22rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    .header-titles h2 {
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: #cbd5e1;
+      text-transform: uppercase;
+    }
+
+    .header-titles .org-name {
+      font-size: 0.85rem;
+      font-weight: 400;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    .header-logo img {
+      max-height: 52px;
+      max-width: 175px;
+      object-fit: contain;
+      background: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 26px auto;
+      padding: 0 20px 40px;
+    }
+
+    /* Zona de carga */
+    #dropZone {
+      background: var(--white);
+      border: 2px dashed var(--border-color);
+      border-radius: 8px;
+      padding: 46px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    #dropZone:hover, #dropZone.drag-over {
+      border-color: var(--pantone-blue);
+      background: #f8fafc;
+    }
+
+    #dropZone h3 {
+      font-size: 1.05rem;
+      color: var(--pantone-blue);
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    #dropZone p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .btn-file-select {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 8px 20px;
+      background: var(--pantone-blue);
+      color: var(--white);
+      border-radius: 4px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-file-select:hover {
+      background: var(--pantone-blue-light);
+    }
+
+    #fileInput { display: none; }
+
+    #loading {
+      display: none;
+      text-align: center;
+      padding: 50px 0;
+    }
+
+    .spinner {
+      width: 42px;
+      height: 42px;
+      border: 4px solid #e2e8f0;
+      border-top-color: var(--pantone-blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 12px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #panel { display: none; }
+
+    .instruction-banner {
+      background: #fffbeb;
+      border-left: 4px solid var(--yellow-border);
+      padding: 12px 18px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      color: #92400e;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    .candidate-card {
+      background: var(--white);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 20px;
+      margin-bottom: 22px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .candidate-card-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--pantone-blue);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 6px;
+    }
+
+    .grid-fields {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .field-group label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 4px;
+    }
+
+    .field-group input {
+      padding: 7px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 0.9rem;
+      color: var(--text-dark);
+      background: #ffffff;
+      outline: none;
+    }
+
+    .field-group input:focus {
+      border-color: var(--pantone-blue);
+    }
+
+    .field-group .static-text {
+      padding: 7px 0;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    .topic-card {
+      background: var(--white);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      margin-bottom: 18px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      overflow: hidden;
+    }
+
+    .topic-header {
+      background: var(--pantone-blue);
+      color: var(--white);
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .topic-header h3 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .topic-score-badge {
+      font-size: 0.82rem;
+      font-weight: 700;
+      background: var(--pantone-blue-light);
+      padding: 2px 10px;
+      border-radius: 12px;
+    }
+
+    .exercise-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+    }
+
+    .exercise-table th, .exercise-table td {
+      padding: 9px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      text-align: left;
+    }
+
+    .exercise-table th {
+      background: #f8fafc;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .exercise-table td:not(:first-child), .exercise-table th:not(:first-child) {
+      text-align: center;
+    }
+
+    .row-auto td { background: var(--white); }
+    .row-manual td { background: var(--yellow-manual); }
+    .row-manual td:first-child { border-left: 3px solid var(--yellow-border); }
+    .row-total td {
+      background: var(--green-total);
+      font-weight: 700;
+      color: var(--green-dark);
+      border-top: 2px solid #b7e1cd;
+    }
+
+    .tag-auto {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      background: #e2e8f0;
+      color: #334155;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .tag-manual {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      background: #fef3c7;
+      color: #92400e;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .input-manual-score {
+      width: 60px;
+      padding: 4px 6px;
+      border: 1px solid var(--yellow-border);
+      border-radius: 4px;
+      background: var(--white);
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--text-dark);
+      outline: none;
+    }
+
+    .input-manual-score:focus {
+      border-color: var(--pantone-blue);
+    }
+
+    .summary-card {
+      background: var(--white);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      margin-top: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      overflow: hidden;
+    }
+
+    .summary-title {
+      background: var(--pantone-blue);
+      color: var(--white);
+      padding: 12px 18px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    .summary-table th {
+      background: #f8fafc;
+      padding: 10px 16px;
+      color: var(--text-muted);
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .summary-table th:first-child { text-align: left; }
+
+    .summary-table td {
+      padding: 10px 16px;
+      border-bottom: 1px solid #f1f5f9;
+      text-align: center;
+    }
+
+    .summary-table td:first-child {
+      text-align: left;
+      font-weight: 600;
+    }
+
+    .summary-table .summary-total-row td {
+      background: var(--green-total);
+      font-weight: 700;
+      color: var(--green-dark);
+      border-top: 2px solid #b7e1cd;
+    }
+
+    .concept-box {
+      background: var(--white);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 16px 20px;
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .concept-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--pantone-blue);
+      text-transform: uppercase;
+    }
+
+    .concept-badge {
+      padding: 5px 16px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 0.88rem;
+    }
+
+    .concept-avanzado { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .concept-intermedio { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+    .concept-refuerzo { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+    .concept-details {
+      color: var(--text-muted);
+      font-size: 0.88rem;
+    }
+
+    .observations-card {
+      background: var(--white);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 18px 20px;
+      margin-top: 16px;
+    }
+
+    .observations-card h4 {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--pantone-blue);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 10px;
+    }
+
+    .observations-card textarea {
+      width: 100%;
+      min-height: 90px;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      color: var(--text-dark);
+      outline: none;
+      resize: vertical;
+    }
+
+    .observations-card textarea:focus {
+      border-color: var(--pantone-blue);
+    }
+
+    .action-buttons {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 24px;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .btn-action {
+      padding: 10px 24px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: background 0.2s;
+    }
+
+    .btn-reset {
+      background: var(--white);
+      color: var(--pantone-blue);
+      border: 1px solid var(--pantone-blue);
+    }
+
+    .btn-reset:hover { background: #f1f5f9; }
+
+    .btn-generate-pdf {
+      background: var(--pantone-blue);
+      color: var(--white);
+    }
+
+    .btn-generate-pdf:hover {
+      background: var(--pantone-blue-light);
+    }
+
+    @media (max-width: 768px) {
+      .header-bar {
+        flex-direction: column;
+        text-align: center;
+        gap: 12px;
+        padding: 16px 20px;
+      }
+      .grid-fields { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
 
-<header class="page-header">
-  <span class="icon">&#128202;</span>
-  <div>
-    <h1>Panel de Calificacion &mdash; Prueba Excel</h1>
-    <p>Carga el archivo resuelto del candidato &middot; Califica los items manuales &middot; Genera el informe PDF</p>
-  </div>
-</header>
+  <header class="header-bar">
+    <div class="header-titles">
+      <h1>Evaluación de Prueba de Conocimiento de Excel</h1>
+      <h2>Selección y Talento Humano</h2>
+      <div class="org-name">Grupo La Conchita</div>
+    </div>
+    <div class="header-logo">
+      <img id="companyLogo" src="https://sistemas359.github.io/SIstemasGLC/flores-la-conchita-nuevo%20(1).png" alt="Logo Grupo La Conchita" crossorigin="anonymous" />
+    </div>
+  </header>
 
-<div class="container">
+  <div class="container">
 
-  <div id="dropZone" onclick="document.getElementById('fileInput').click()">
-    <div class="dz-icon">&#128193;</div>
-    <h2>Carga el archivo Excel del candidato</h2>
-    <p>Arrastra el archivo aqui o haz clic para seleccionarlo</p>
-    <p class="hint">Solo archivos .xlsx &middot; El procesamiento ocurre en tu navegador, sin subir datos</p>
-    <span class="btn-upload">Seleccionar archivo</span>
-    <input type="file" id="fileInput" accept=".xlsx" />
-  </div>
+    <div id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <h3>Adjuntar Archivo de Prueba</h3>
+      <p>Arrastre o haga clic para adjuntar el archivo que desea evaluar. Admite solo formatos de Excel</p>
+      <button type="button" class="btn-file-select">Seleccionar Archivo (.xlsx)</button>
+      <input type="file" id="fileInput" accept=".xlsx" />
+    </div>
 
-  <div id="loading">
-    <div class="spinner"></div>
-    <p style="color:var(--muted);">Procesando archivo Excel&hellip;</p>
-  </div>
+    <div id="loading">
+      <div class="spinner"></div>
+      <p style="color:var(--text-muted); font-size:0.9rem;">Procesando archivo de prueba...</p>
+    </div>
 
-  <div id="panel">
-    <div class="candidate-bar">
-      <div class="cbar-item">
-        <span class="cbar-label">&#128100; Candidato</span>
-        <input class="cbar-input" id="candidateName" type="text" placeholder="Nombre del candidato" />
+    <div id="panel">
+
+      <div class="instruction-banner">
+        Diligencie únicamente los campos resaltados en amarillo para completar su evaluación
       </div>
-      <div class="cbar-item">
-        <span class="cbar-label">&#128197; Fecha de evaluacion</span>
-        <span class="cbar-value" id="evalDate"></span>
+
+      <div class="candidate-card">
+        <div class="candidate-card-title">Datos del Candidato y Evaluación</div>
+        <div class="grid-fields">
+          <div class="field-group">
+            <label for="inputCandidato">Nombre Candidato</label>
+            <input type="text" id="inputCandidato" placeholder="Nombre completo del candidato" />
+          </div>
+          <div class="field-group">
+            <label for="inputCorreo">Correo Electrónico</label>
+            <input type="email" id="inputCorreo" placeholder="correo@ejemplo.com" />
+          </div>
+          <div class="field-group">
+            <label for="inputCargo">Cargo al que Aspira</label>
+            <input type="text" id="inputCargo" placeholder="Nombre del cargo o vacante" />
+          </div>
+          <div class="field-group">
+            <label for="inputEvaluador">Quién Evalúa</label>
+            <input type="text" id="inputEvaluador" placeholder="Nombre del evaluador / reclutador" />
+          </div>
+          <div class="field-group">
+            <label>Fecha de Aplicación</label>
+            <div class="static-text" id="labelFecha"></div>
+          </div>
+          <div class="field-group">
+            <label>Temas Evaluados</label>
+            <div class="static-text" id="labelTemas"></div>
+          </div>
+        </div>
       </div>
-      <div class="cbar-item">
-        <span class="cbar-label">&#128203; Temas evaluados</span>
-        <span class="cbar-value" id="temasLabel"></span>
+
+      <div id="topicsContainer"></div>
+
+      <div class="summary-card">
+        <div class="summary-title">Resumen Consolidado de Calificación por Tema</div>
+        <table class="summary-table">
+          <thead>
+            <tr>
+              <th>Tema / Competencia Evaluada</th>
+              <th>Puntos Obtenidos</th>
+              <th>Puntos Máximos</th>
+              <th>% Cumplimiento</th>
+            </tr>
+          </thead>
+          <tbody id="summaryBody"></tbody>
+          <tfoot id="summaryFoot"></tfoot>
+        </table>
       </div>
-    </div>
 
-    <div class="alert-pending" id="alertPending" style="display:none">
-      &#9888;&#65039;&nbsp; <span id="alertText"></span>
-    </div>
-
-    <div id="sectionsContainer"></div>
-
-    <div class="summary-card">
-      <div class="summary-head">&#128202; Resumen Consolidado de Calificacion por Tema</div>
-      <table class="sum-table">
-        <thead>
-          <tr>
-            <th>Tema / Competencia</th>
-            <th>Puntos Obtenidos</th>
-            <th>Puntos Maximos</th>
-            <th>% Cumplimiento</th>
-          </tr>
-        </thead>
-        <tbody id="summaryBody"></tbody>
-        <tfoot id="summaryFoot"></tfoot>
-      </table>
-    </div>
-
-    <div class="summary-card" style="margin-top:10px;">
-      <div class="concepto-bar">
-        <strong>CONCEPTO FINAL DEL CANDIDATO:</strong>
-        <span class="nivel-pill" id="nivelBadge"></span>
-        <span class="concepto-pct" id="nivelPct"></span>
+      <div class="concept-box">
+        <span class="concept-title">Concepto Final:</span>
+        <span class="concept-badge" id="conceptBadge">-</span>
+        <span class="concept-details" id="conceptDetails"></span>
       </div>
+
+      <div class="observations-card">
+        <h4>Observaciones Generales</h4>
+        <textarea id="observacionesGenerales" placeholder="Ingrese las observaciones y comentarios generales sobre el desempeño del candidato..."></textarea>
+      </div>
+
+      <div class="action-buttons">
+        <button class="btn-action btn-reset" onclick="resetApp()">Cargar otro archivo</button>
+        <button class="btn-action btn-generate-pdf" onclick="exportarPDF()">Generar Informe PDF</button>
+      </div>
+
     </div>
 
-    <div class="obs-box">
-      <h3>&#128221; Observaciones Generales del Reclutador</h3>
-      <textarea id="observaciones" placeholder="Escribe aqui las observaciones generales sobre el desempeno del candidato..."></textarea>
-    </div>
-
-    <div class="actions-bar">
-      <button class="btn btn-reset" onclick="resetPanel()">&#128260; Cargar otro archivo</button>
-      <button class="btn btn-pdf" onclick="generarPDF()">&#128196; Generar Informe PDF</button>
-    </div>
   </div>
 
-</div>
+  <script>
+    "use strict";
 
-<script>
-'use strict';
+    const state = {
+      candidateName: "",
+      temas: [],
+      temasAplicados: []
+    };
 
-const state = { candidateName: '', temas: [], temasAplicados: [] };
+    const NIVELES = [
+      { min: 0.90, label: "AVANZADO (Dominio Avanzado)", css: "concept-avanzado" },
+      { min: 0.70, label: "INTERMEDIO", css: "concept-intermedio" },
+      { min: 0.00, label: "REQUIERE REFUERZO", css: "concept-refuerzo" }
+    ];
 
-const NIVELES = [
-  { min: 0.90, label: 'AVANZADO (Dominio Avanzado)', css: 'nivel-avanzado' },
-  { min: 0.70, label: 'INTERMEDIO',                  css: 'nivel-intermedio' },
-  { min: 0,    label: 'REQUIERE REFUERZO',           css: 'nivel-refuerzo'  },
-];
+    let logoDataUrl = null;
+    (function preloadLogo() {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = function() {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0);
+          logoDataUrl = canvas.toDataURL("image/png");
+        } catch(e) {
+          console.warn("No se pudo convertir el logo a dataURL para PDF:", e);
+        }
+      };
+      img.src = "https://sistemas359.github.io/SIstemasGLC/flores-la-conchita-nuevo%20(1).png";
+    })();
 
-const dropZone  = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
+    const dropZone = document.getElementById("dropZone");
+    const fileInput = document.getElementById("fileInput");
 
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault(); dropZone.classList.remove('drag-over');
-  const f = e.dataTransfer.files[0];
-  if (f && f.name.endsWith('.xlsx')) processFile(f);
-  else alert('Por favor carga un archivo .xlsx valido.');
-});
-fileInput.addEventListener('change', () => { if (fileInput.files[0]) processFile(fileInput.files[0]); });
-
-async function processFile(file) {
-  dropZone.style.display = 'none';
-  document.getElementById('loading').style.display = 'block';
-  document.getElementById('panel').style.display   = 'none';
-  try {
-    const rawName = file.name.replace(/\.xlsx$/i,'').replace(/^Prueba_Excel_/i,'').replace(/_/g,' ').trim();
-    state.candidateName = rawName || 'Candidato';
-
-    const buffer   = await file.arrayBuffer();
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
-
-    const temasSet = new Set();
-    workbook.worksheets.forEach(ws => {
-      const m = ws.name.toUpperCase().match(/H0([1-9])/);
-      if (m && ws.state === 'visible') temasSet.add('H0' + m[1]);
+    dropZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropZone.classList.add("drag-over");
     });
-    state.temasAplicados = [...temasSet].sort();
 
-    const wsR = workbook.worksheets.find(ws => ws.name.toLowerCase().includes('resultados'));
-    if (!wsR) throw new Error('No se encontro la hoja RESULTADOS en el archivo.');
-
-    state.temas = parseResultados(wsR, temasSet);
-    if (state.temas.length === 0) throw new Error('No se encontraron secciones de temas. Verifica que los encabezados tengan el formato "HOJA H01 - NOMBRE DEL TEMA".');
-
-    renderPanel();
-  } catch(err) {
-    console.error(err);
-    alert('Error al procesar el archivo:\n' + err.message);
-    resetPanel();
-  } finally {
-    document.getElementById('loading').style.display = 'none';
-  }
-}
-
-function parseResultados(ws, temasSet) {
-  const temas = [];
-  let cur = null, inSum = false;
-
-  ws.eachRow((row, rn) => {
-    if (rn < 3) return;
-    const tA = cText(row.getCell(1));
-    const tU = tA.toUpperCase();
-
-    if (tU.includes('RESUMEN CONSOLIDADO')) { inSum = true; return; }
-    if (inSum) return;
-
-    const hm = tU.match(/^HOJA\s+(H0[1-9])\s*[-\u2013\u2014]\s*(.+)/);
-    if (hm) {
-      const cod = hm[1], nom = hm[2].trim();
-      if (temasSet.size === 0 || temasSet.has(cod)) {
-        cur = { codigo: cod, nombre: nom, ejercicios: [] };
-        temas.push(cur);
-      } else { cur = null; }
-      return;
-    }
-    if (!cur) return;
-    if (tU.startsWith('TOTAL')) return;
-
-    const tC   = cText(row.getCell(3));
-    const ptMx = cNum(row.getCell(5));
-    if (tA.trim() === '') return;
-
-    const esManual = /evaluaci[o\u00f3]n\s+manual/i.test(tC);
-    const rm = tC.match(/\(0\s+a\s+(\d+)\)/i);
-    const rMax = rm ? parseInt(rm[1]) : ptMx;
-    const ptMax = Math.max(ptMx, rMax);
-    const ptAuto = esManual ? 0 : cNum(row.getCell(4));
-
-    cur.ejercicios.push({ desc: tA.trim(), colC: tC.trim(), ptAuto, ptMax, rangoMax: rMax > 0 ? rMax : ptMax, esManual });
-  });
-  return temas;
-}
-
-function cText(cell) {
-  if (!cell || cell.value == null) return '';
-  const v = cell.value;
-  if (typeof v === 'object') {
-    if ('result'   in v) return String(v.result ?? '');
-    if ('richText' in v) return v.richText.map(r => r.text).join('');
-    if ('text'     in v) return v.text ?? '';
-  }
-  return String(v);
-}
-function cNum(cell) {
-  if (!cell || cell.value == null) return 0;
-  const v = cell.value;
-  if (typeof v === 'object' && 'result' in v) return Number(v.result) || 0;
-  return Number(v) || 0;
-}
-
-function renderPanel() {
-  document.getElementById('candidateName').value = state.candidateName;
-  document.getElementById('evalDate').textContent = new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'});
-  document.getElementById('temasLabel').textContent = state.temas.length + ' de 9  (' + state.temas.map(t=>t.codigo).join(', ') + ')';
-
-  const pending = state.temas.reduce((s,t) => s + t.ejercicios.filter(e=>e.esManual).length, 0);
-  if (pending > 0) {
-    document.getElementById('alertText').textContent = pending + ' item(s) requieren calificacion manual (fondo amarillo). Completa los puntajes antes de generar el PDF.';
-    document.getElementById('alertPending').style.display = 'flex';
-  }
-
-  document.getElementById('sectionsContainer').innerHTML = state.temas.map((t,i) => buildCard(t,i)).join('');
-  updateTotals();
-  document.getElementById('panel').style.display = 'block';
-}
-
-function buildCard(tema, tIdx) {
-  const maxTotal = tema.ejercicios.reduce((s,e) => s+e.ptMax, 0);
-  const rows = tema.ejercicios.map((ej, eIdx) => {
-    const rc     = ej.esManual ? 'row-manual' : 'row-auto';
-    const badge  = ej.esManual ? '<span class="badge badge-manual">&#9999;&#65039; Manual</span>' : '<span class="badge badge-auto">&#9889; Auto</span>';
-    const expCell= ej.esManual ? '<small style="color:#856404">'+ej.colC+'</small>' : '<small>'+(ej.colC||'&mdash;')+'</small>';
-    const ptsCell= ej.esManual ? '<input type="number" class="manual-input" id="inp-'+tIdx+'-'+eIdx+'" min="0" max="'+ej.rangoMax+'" value="0" oninput="validateInput(this,'+ej.rangoMax+')">' : '<strong>'+ej.ptAuto+'</strong>';
-    return '<tr class="'+rc+'"><td>'+ej.desc+'</td><td>'+badge+'</td><td>'+expCell+'</td><td>'+ptsCell+'</td><td>'+ej.ptMax+'</td></tr>';
-  }).join('');
-
-  return '<div class="section-card"><div class="section-head"><h3>&#128204; '+tema.codigo+' &mdash; '+tema.nombre+'</h3><span class="total-badge" id="badge-'+tIdx+'">0 / '+maxTotal+' pts</span></div><table class="ex-table"><thead><tr><th>Ejercicio / Criterio Evaluado</th><th style="width:11%">Tipo</th><th style="width:19%">Respuesta Esperada</th><th style="width:11%">Pts. Obtenidos</th><th style="width:9%">Pts. Max.</th></tr></thead><tbody>'+rows+'<tr class="row-total"><td colspan="3" style="text-align:right;padding-right:18px;">TOTAL '+tema.nombre+'</td><td id="ttl-'+tIdx+'">0</td><td>'+maxTotal+'</td></tr></tbody></table></div>';
-}
-
-function validateInput(input, max) {
-  let v = parseInt(input.value);
-  if (isNaN(v)||v<0) { input.value=0; } else if (v>max) { input.value=max; }
-  updateTotals();
-}
-
-function updateTotals() {
-  let gT=0, gM=0;
-  state.temas.forEach((tema,tIdx) => {
-    let tT=0;
-    const tM = tema.ejercicios.reduce((s,e)=>s+e.ptMax,0);
-    tema.ejercicios.forEach((ej,eIdx) => {
-      tT += ej.esManual ? (parseInt(document.getElementById('inp-'+tIdx+'-'+eIdx)?.value)||0) : ej.ptAuto;
+    dropZone.addEventListener("dragleave", () => {
+      dropZone.classList.remove("drag-over");
     });
-    gT+=tT; gM+=tM;
-    const b=document.getElementById('badge-'+tIdx); if(b) b.textContent=tT+' / '+tM+' pts';
-    const t=document.getElementById('ttl-'+tIdx);   if(t) t.textContent=tT;
-  });
-  renderSummary(gT,gM);
-}
 
-function renderSummary(gT, gM) {
-  document.getElementById('summaryBody').innerHTML = state.temas.map((tema,tIdx) => {
-    let tT=0, tM=tema.ejercicios.reduce((s,e)=>s+e.ptMax,0);
-    tema.ejercicios.forEach((ej,eIdx) => { tT += ej.esManual?(parseInt(document.getElementById('inp-'+tIdx+'-'+eIdx)?.value)||0):ej.ptAuto; });
-    const pct = tM>0?((tT/tM)*100).toFixed(1):'0.0';
-    return '<tr><td><strong>'+tema.codigo+'</strong> &mdash; '+tema.nombre+'</td><td>'+tT+'</td><td>'+tM+'</td><td>'+pct+'%</td></tr>';
-  }).join('');
-
-  const pct = gM>0?((gT/gM)*100).toFixed(1):'0.0';
-  document.getElementById('summaryFoot').innerHTML = '<tr class="foot-total"><td>TOTAL PONDERADO EVALUADO</td><td>'+gT+'</td><td>'+gM+'</td><td><strong>'+pct+'%</strong></td></tr>';
-
-  const ratio = gM>0?gT/gM:0;
-  const nivel = NIVELES.find(n=>ratio>=n.min) ?? NIVELES[NIVELES.length-1];
-  const badge = document.getElementById('nivelBadge');
-  badge.className = 'nivel-pill '+nivel.css;
-  badge.textContent = nivel.label;
-  document.getElementById('nivelPct').textContent = '('+pct+'% \u2014 '+gT+' / '+gM+' puntos)';
-}
-
-async function generarPDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
-
-  const candName  = document.getElementById('candidateName').value.trim() || 'Candidato';
-  const evalDate  = document.getElementById('evalDate').textContent;
-  const obs       = document.getElementById('observaciones').value.trim();
-
-  let gT=0, gM=0;
-  const resRows=[], detRows=[];
-
-  state.temas.forEach((tema,tIdx) => {
-    let tT=0, tM=tema.ejercicios.reduce((s,e)=>s+e.ptMax,0);
-    tema.ejercicios.forEach((ej,eIdx) => {
-      const pts = ej.esManual ? (parseInt(document.getElementById('inp-'+tIdx+'-'+eIdx)?.value)||0) : ej.ptAuto;
-      tT += pts;
-      detRows.push([tema.codigo, ej.desc.length>62?ej.desc.slice(0,59)+'...':ej.desc, ej.esManual?'Manual':'Automatico', pts, ej.ptMax]);
-    });
-    gT+=tT; gM+=tM;
-    const pct = tM>0?((tT/tM)*100).toFixed(1)+'%':'0.0%';
-    resRows.push([tema.codigo+' \u2014 '+tema.nombre, tT, tM, pct]);
-  });
-
-  const totalPct = gM>0?((gT/gM)*100).toFixed(1):'0.0';
-  const ratio    = gM>0?gT/gM:0;
-  const nivel    = NIVELES.find(n=>ratio>=n.min) ?? NIVELES[NIVELES.length-1];
-  const nColor   = {'nivel-avanzado':[45,106,79],'nivel-intermedio':[230,126,34],'nivel-refuerzo':[192,57,43]}[nivel.css];
-
-  let y = 0;
-
-  // Header
-  doc.setFillColor(26,26,46); doc.rect(0,0,210,30,'F');
-  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(13);
-  doc.text('INFORME DE EVALUACION \u2014 PRUEBA EXCEL', 105, 13, {align:'center'});
-  doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
-  doc.text('Area de Seleccion y Talento Humano', 105, 22, {align:'center'});
-  y = 38;
-
-  // Ficha candidato
-  doc.setFillColor(240,242,245); doc.roundedRect(14,y-5,182,26,2,2,'F');
-  doc.setTextColor(51,51,51); doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
-  doc.text('Candidato:',14+4,y+1); doc.text('Fecha:',14+4,y+9); doc.text('Temas evaluados:',14+4,y+17);
-  doc.setFont('helvetica','normal');
-  doc.text(candName,48,y+1); doc.text(evalDate,38,y+9);
-  doc.text(state.temas.map(t=>t.codigo).join(', '),56,y+17);
-  y += 32;
-
-  // Resumen por tema
-  doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(26,26,46);
-  doc.text('RESULTADOS POR COMPETENCIA EVALUADA', 14, y); y += 3;
-
-  doc.autoTable({
-    startY:y,
-    head:[['Competencia / Tema','Pts. Obtenidos','Pts. Maximos','% Cumplimiento']],
-    body:resRows,
-    foot:[['TOTAL PONDERADO EVALUADO', gT, gM, totalPct+'%']],
-    headStyles:{fillColor:[26,26,46],textColor:255,fontSize:8,halign:'center',fontStyle:'bold'},
-    bodyStyles:{fontSize:8.5,textColor:[51,51,51]},
-    footStyles:{fillColor:[45,106,79],textColor:255,fontStyle:'bold',fontSize:9},
-    columnStyles:{0:{halign:'left',cellWidth:104},1:{halign:'center',cellWidth:26},2:{halign:'center',cellWidth:26},3:{halign:'center',cellWidth:26}},
-    alternateRowStyles:{fillColor:[248,249,250]},
-    margin:{left:14,right:14},
-  });
-  y = doc.lastAutoTable.finalY + 8;
-
-  // Concepto final
-  doc.setFillColor(...nColor); doc.roundedRect(14,y,182,13,3,3,'F');
-  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9.5);
-  doc.text('Concepto Final: '+nivel.label+'   ('+totalPct+'% \u2014 '+gT+' / '+gM+' puntos)', 105, y+8.5, {align:'center'});
-  y += 20;
-
-  // Observaciones
-  if (y < 220) {
-    doc.setTextColor(26,26,46); doc.setFont('helvetica','bold'); doc.setFontSize(9.5);
-    doc.text('OBSERVACIONES GENERALES', 14, y); y += 4;
-    doc.setDrawColor(230,57,70); doc.setLineWidth(0.4); doc.line(14,y,196,y); y += 4;
-    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(51,51,51);
-    const lines = doc.splitTextToSize(obs||'Sin observaciones adicionales.', 178);
-    doc.text(lines, 14, y); y += lines.length*4.8 + 14;
-    if (y < 255) {
-      doc.setDrawColor(150); doc.setLineWidth(0.4);
-      doc.line(14,y+14,84,y+14); doc.setFontSize(7.5); doc.setTextColor(120);
-      doc.text('Firma del Reclutador',14,y+19);
-      doc.line(126,y+14,196,y+14); doc.text('Fecha',126,y+19);
-    }
-  }
-
-  // Pagina 2: Detalle
-  doc.addPage(); y=18;
-  doc.setTextColor(26,26,46); doc.setFont('helvetica','bold'); doc.setFontSize(9.5);
-  doc.text('DETALLE DE CALIFICACION POR EJERCICIO', 14, y);
-  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(120);
-  doc.text('Candidato: '+candName+'  \u00b7  '+evalDate, 14, y+5); y+=10;
-
-  doc.autoTable({
-    startY:y,
-    head:[['Tema','Ejercicio / Criterio Evaluado','Tipo','Pts.','Max.']],
-    body:detRows,
-    headStyles:{fillColor:[26,26,46],textColor:255,fontSize:7.5,fontStyle:'bold'},
-    bodyStyles:{fontSize:7.5,textColor:[51,51,51]},
-    alternateRowStyles:{fillColor:[248,249,250]},
-    columnStyles:{0:{halign:'center',cellWidth:12},1:{halign:'left',cellWidth:118},2:{halign:'center',cellWidth:22},3:{halign:'center',cellWidth:13},4:{halign:'center',cellWidth:13}},
-    didParseCell: data => {
-      if (data.section==='body' && data.column.index===2 && data.cell.raw==='Manual') {
-        data.cell.styles.fillColor=[255,253,231]; data.cell.styles.textColor=[133,100,4]; data.cell.styles.fontStyle='bold';
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("drag-over");
+      const file = e.dataTransfer.files[0];
+      if (file && file.name.endsWith(".xlsx")) {
+        handleFile(file);
+      } else {
+        alert("Por favor adjunte un archivo de Excel válido (.xlsx)");
       }
-    },
-    margin:{left:14,right:14},
-  });
+    });
 
-  // Footer
-  const pc = doc.getNumberOfPages();
-  for (let p=1;p<=pc;p++) {
-    doc.setPage(p); doc.setFontSize(7); doc.setTextColor(160);
-    doc.text('Informe generado el '+new Date().toLocaleDateString('es-CO')+' \u2014 Pagina '+p+' de '+pc, 105, 290, {align:'center'});
-  }
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files[0]) {
+        handleFile(fileInput.files[0]);
+      }
+    });
 
-  const sn = candName.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_\-]/g,'');
-  doc.save('Informe_'+sn+'_'+new Date().toISOString().split('T')[0]+'.pdf');
-}
+    async function handleFile(file) {
+      dropZone.style.display = "none";
+      document.getElementById("loading").style.display = "block";
+      document.getElementById("panel").style.display = "none";
 
-function resetPanel() {
-  document.getElementById('panel').style.display = 'none';
-  document.getElementById('loading').style.display = 'none';
-  dropZone.style.display = 'block';
-  fileInput.value = '';
-  document.getElementById('sectionsContainer').innerHTML = '';
-  document.getElementById('summaryBody').innerHTML = '';
-  document.getElementById('summaryFoot').innerHTML = '';
-  document.getElementById('observaciones').value = '';
-  document.getElementById('alertPending').style.display = 'none';
-  state.candidateName=''; state.temas=[]; state.temasAplicados=[];
-}
-</script>
+      try {
+        const buffer = await file.arrayBuffer();
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(buffer);
+
+        const visibleTemas = new Set();
+        workbook.worksheets.forEach(ws => {
+          const match = ws.name.toUpperCase().match(/H0([1-9])/);
+          if (match && ws.state === "visible") {
+            visibleTemas.add("H0" + match[1]);
+          }
+        });
+        state.temasAplicados = [...visibleTemas].sort();
+
+        const wsResultados = workbook.worksheets.find(ws =>
+          ws.name.toLowerCase().includes("resultados")
+        );
+
+        if (!wsResultados) {
+          throw new Error("No se encontró la hoja RESULTADOS en el archivo de Excel.");
+        }
+
+        state.temas = parseWorksheetResultados(wsResultados, visibleTemas);
+
+        if (state.temas.length === 0) {
+          throw new Error("No se encontraron temas para calificar en la hoja RESULTADOS.");
+        }
+
+        renderDashboard();
+
+      } catch (err) {
+        console.error(err);
+        alert("Error al procesar el archivo: " + err.message);
+        resetApp();
+      } finally {
+        document.getElementById("loading").style.display = "none";
+      }
+    }
+
+    function parseWorksheetResultados(ws, visibleTemas) {
+      const temas = [];
+      let currentTema = null;
+      let inSummary = false;
+
+      ws.eachRow((row, rowNumber) => {
+        if (rowNumber < 3) return;
+
+        const cellA = getCellText(row.getCell(1));
+        const cellAUpper = cellA.toUpperCase().trim();
+
+        if (cellAUpper.includes("RESUMEN CONSOLIDADO")) {
+          inSummary = true;
+          return;
+        }
+        if (inSummary) return;
+
+        const headerMatch = cellAUpper.match(/^HOJA\s+(H0[1-9])\s*[-–—]\s*(.+)/);
+        if (headerMatch) {
+          const codigo = headerMatch[1];
+          const nombre = headerMatch[2].trim();
+
+          const include = visibleTemas.size === 0 || visibleTemas.has(codigo);
+          if (include) {
+            currentTema = { codigo, nombre, ejercicios: [] };
+            temas.push(currentTema);
+          } else {
+            currentTema = null;
+          }
+          return;
+        }
+
+        if (!currentTema) return;
+        if (cellAUpper.startsWith("TOTAL")) return;
+
+        const cellC = getCellText(row.getCell(3));
+        const ptMaxOriginal = getCellNumber(row.getCell(5));
+
+        if (cellA.trim() === "") return;
+
+        const isManual = /evaluaci[oó]n\s+manual/i.test(cellC);
+        const matchRange = cellC.match(/\(0\s+a\s+(\d+)\)/i);
+        const rangeMax = matchRange ? parseInt(matchRange[1]) : ptMaxOriginal;
+        const ptMax = Math.max(ptMaxOriginal, rangeMax);
+        const ptAuto = isManual ? 0 : getCellNumber(row.getCell(4));
+
+        currentTema.ejercicios.push({
+          desc: cellA.trim(),
+          expectedText: cellC.trim(),
+          ptAuto,
+          ptMax,
+          rangeMax: rangeMax > 0 ? rangeMax : ptMax,
+          isManual
+        });
+      });
+
+      return temas;
+    }
+
+    function getCellText(cell) {
+      if (!cell || cell.value == null) return "";
+      const val = cell.value;
+      if (typeof val === "object") {
+        if ("result" in val) return String(val.result ?? "");
+        if ("richText" in val) return val.richText.map(r => r.text).join("");
+        if ("text" in val) return val.text ?? "";
+      }
+      return String(val);
+    }
+
+    function getCellNumber(cell) {
+      if (!cell || cell.value == null) return 0;
+      const val = cell.value;
+      if (typeof val === "object" && "result" in val) return Number(val.result) || 0;
+      return Number(val) || 0;
+    }
+
+    function renderDashboard() {
+      const today = new Date().toLocaleDateString("es-CO", {
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      });
+
+      document.getElementById("labelFecha").textContent = today;
+      document.getElementById("labelTemas").textContent =
+        state.temas.length + " tema(s) (" + state.temas.map(t => t.codigo).join(", ") + ")";
+
+      const topicsContainer = document.getElementById("topicsContainer");
+      topicsContainer.innerHTML = state.temas.map((tema, tIdx) => buildTopicCard(tema, tIdx)).join("");
+
+      updateCalculations();
+      document.getElementById("panel").style.display = "block";
+    }
+
+    function buildTopicCard(tema, tIdx) {
+      const totalMax = tema.ejercicios.reduce((acc, ej) => acc + ej.ptMax, 0);
+
+      const rows = tema.ejercicios.map((ej, eIdx) => {
+        const rowClass = ej.isManual ? "row-manual" : "row-auto";
+        const typeTag = ej.isManual
+          ? '<span class="tag-manual">Manual</span>'
+          : '<span class="tag-auto">Automático</span>';
+
+        const expectedDisplay = ej.isManual
+          ? '<small style="color:#92400e;">' + ej.expectedText + '</small>'
+          : '<small>' + (ej.expectedText || "—") + '</small>';
+
+        const scoreInput = ej.isManual
+          ? '<input type="number" class="input-manual-score" id="input-' + tIdx + '-' + eIdx + '" min="0" max="' + ej.rangeMax + '" value="0" oninput="validateScoreInput(this, ' + ej.rangeMax + ')">'
+          : '<strong>' + ej.ptAuto + '</strong>';
+
+        return ' <tr class="' + rowClass + '"> <td>' + ej.desc + '</td> <td>' + typeTag + '</td> <td>' + expectedDisplay + '</td> <td>' + scoreInput + '</td> <td>' + ej.ptMax + '</td> </tr>';
+      }).join("");
+
+      return '<div class="topic-card"> <div class="topic-header"> <h3>' + tema.codigo + ' — ' + tema.nombre + '</h3> <span class="topic-score-badge" id="topicBadge-' + tIdx + '">0 / ' + totalMax + ' pts</span> </div> <table class="exercise-table"> <thead> <tr> <th>Ejercicio / Criterio Evaluado</th> <th style="width: 12%;">Tipo</th> <th style="width: 22%;">Respuesta Esperada</th> <th style="width: 12%;">Pts. Obtenidos</th> <th style="width: 10%;">Pts. Máx.</th> </tr> </thead> <tbody>' + rows + '<tr class="row-total"> <td colspan="3" style="text-align: right; padding-right: 18px;">TOTAL ' + tema.nombre + '</td> <td id="topicTotal-' + tIdx + '">0</td> <td>' + totalMax + '</td> </tr> </tbody> </table> </div>';
+    }
+
+    function validateScoreInput(input, max) {
+      let val = parseInt(input.value);
+      if (isNaN(val) || val < 0) { input.value = 0; }
+      else if (val > max) { input.value = max; }
+      updateCalculations();
+    }
+
+    function updateCalculations() {
+      let grandTotalObtained = 0;
+      let grandTotalMax = 0;
+
+      state.temas.forEach((tema, tIdx) => {
+        let topicObtained = 0;
+        const topicMax = tema.ejercicios.reduce((acc, ej) => acc + ej.ptMax, 0);
+
+        tema.ejercicios.forEach((ej, eIdx) => {
+          if (ej.isManual) {
+            const inputVal = parseInt(document.getElementById("input-" + tIdx + "-" + eIdx)?.value) || 0;
+            topicObtained += inputVal;
+          } else {
+            topicObtained += ej.ptAuto;
+          }
+        });
+
+        grandTotalObtained += topicObtained;
+        grandTotalMax += topicMax;
+
+        const badge = document.getElementById("topicBadge-" + tIdx);
+        const totalCell = document.getElementById("topicTotal-" + tIdx);
+        if (badge) badge.textContent = topicObtained + " / " + topicMax + " pts";
+        if (totalCell) totalCell.textContent = topicObtained;
+      });
+
+      renderSummaryTable(grandTotalObtained, grandTotalMax);
+    }
+
+    function renderSummaryTable(grandObtained, grandMax) {
+      const summaryBody = document.getElementById("summaryBody");
+      summaryBody.innerHTML = state.temas.map((tema, tIdx) => {
+        let topicObtained = 0;
+        const topicMax = tema.ejercicios.reduce((acc, ej) => acc + ej.ptMax, 0);
+
+        tema.ejercicios.forEach((ej, eIdx) => {
+          topicObtained += ej.isManual
+            ? (parseInt(document.getElementById("input-" + tIdx + "-" + eIdx)?.value) || 0)
+            : ej.ptAuto;
+        });
+
+        const pct = topicMax > 0 ? ((topicObtained / topicMax) * 100).toFixed(1) : "0.0";
+
+        return "<tr><td>" + tema.codigo + " — " + tema.nombre + "</td><td>" + topicObtained + "</td><td>" + topicMax + "</td><td>" + pct + "%</td></tr>";
+      }).join("");
+
+      const grandPct = grandMax > 0 ? ((grandObtained / grandMax) * 100).toFixed(1) : "0.0";
+      document.getElementById("summaryFoot").innerHTML =
+        '<tr class="summary-total-row"><td>TOTAL PONDERADO EVALUADO</td><td>' + grandObtained + '</td><td>' + grandMax + '</td><td>' + grandPct + '%</td></tr>';
+
+      const ratio = grandMax > 0 ? (grandObtained / grandMax) : 0;
+      const nivel = NIVELES.find(n => ratio >= n.min) || NIVELES[NIVELES.length - 1];
+
+      const conceptBadge = document.getElementById("conceptBadge");
+      conceptBadge.className = "concept-badge " + nivel.css;
+      conceptBadge.textContent = nivel.label;
+
+      document.getElementById("conceptDetails").textContent =
+        "(" + grandPct + "% de cumplimiento — " + grandObtained + " de " + grandMax + " puntos posibles)";
+    }
+
+    function exportarPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+      const nombreCandidato = document.getElementById("inputCandidato").value.trim() || "No especificado";
+      const correoElectronico = document.getElementById("inputCorreo").value.trim() || "No especificado";
+      const cargoAspira = document.getElementById("inputCargo").value.trim() || "No especificado";
+      const quienEvalua = document.getElementById("inputEvaluador").value.trim() || "No especificado";
+      const fechaAplicacion = document.getElementById("labelFecha").textContent;
+      const observaciones = document.getElementById("observacionesGenerales").value.trim() || "Sin observaciones.";
+
+      let grandObtained = 0;
+      let grandMax = 0;
+      const summaryRows = [];
+      const detailRows = [];
+
+      state.temas.forEach((tema, tIdx) => {
+        let topicObtained = 0;
+        const topicMax = tema.ejercicios.reduce((acc, ej) => acc + ej.ptMax, 0);
+
+        tema.ejercicios.forEach((ej, eIdx) => {
+          const score = ej.isManual
+            ? (parseInt(document.getElementById("input-" + tIdx + "-" + eIdx)?.value) || 0)
+            : ej.ptAuto;
+          topicObtained += score;
+
+          detailRows.push([
+            tema.codigo,
+            ej.desc.length > 60 ? ej.desc.substring(0, 58) + "..." : ej.desc,
+            ej.isManual ? "Manual" : "Automático",
+            score,
+            ej.ptMax
+          ]);
+        });
+
+        grandObtained += topicObtained;
+        grandMax += topicMax;
+        const pct = topicMax > 0 ? ((topicObtained / topicMax) * 100).toFixed(1) + "%" : "0.0%";
+        summaryRows.push([tema.codigo + " — " + tema.nombre, topicObtained, topicMax, pct]);
+      });
+
+      const grandPct = grandMax > 0 ? ((grandObtained / grandMax) * 100).toFixed(1) : "0.0";
+      const ratio = grandMax > 0 ? (grandObtained / grandMax) : 0;
+      const nivel = NIVELES.find(n => ratio >= n.min) || NIVELES[NIVELES.length - 1];
+
+      const pantoneRGB = [12, 35, 64];
+
+      /* Página 1: Cabecera y Resumen */
+      doc.setFillColor(...pantoneRGB);
+      doc.rect(0, 0, 210, 32, "F");
+
+      if (logoDataUrl) {
+        try {
+          doc.addImage(logoDataUrl, "PNG", 14, 6, 38, 20);
+        } catch(e) {
+          console.warn("Logo en PDF omitido:", e);
+        }
+      }
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10.5);
+      doc.text("INFORME DE APLICACIÓN DE PRUEBA DE CONOCIMIENTO DE EXCEL", logoDataUrl ? 58 : 105, 12, { align: logoDataUrl ? "left" : "center" });
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text("Selección, Bienestar y Capacitación", logoDataUrl ? 58 : 105, 18, { align: logoDataUrl ? "left" : "center" });
+      doc.setFontSize(8);
+      doc.setTextColor(203, 213, 225);
+      doc.text("Grupo La Conchita", logoDataUrl ? 58 : 105, 24, { align: logoDataUrl ? "left" : "center" });
+
+      let currentY = 38;
+
+      /* Tarjeta de Datos */
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(209, 213, 219);
+      doc.roundedRect(14, currentY, 182, 34, 2, 2, "FD");
+
+      doc.setTextColor(12, 35, 64);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.5);
+
+      doc.text("Nombre Candidato:", 18, currentY + 8);
+      doc.text("Cargo al que Aspira:", 18, currentY + 16);
+      doc.text("Quién Evalúa:", 18, currentY + 24);
+
+      doc.text("Correo Electrónico:", 110, currentY + 8);
+      doc.text("Fecha de Aplicación:", 110, currentY + 16);
+      doc.text("Temas Evaluados:", 110, currentY + 24);
+
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(51, 65, 85);
+
+      doc.text(nombreCandidato, 48, currentY + 8);
+      doc.text(cargoAspira, 50, currentY + 16);
+      doc.text(quienEvalua, 42, currentY + 24);
+
+      doc.text(correoElectronico, 142, currentY + 8);
+      doc.text(fechaAplicacion, 142, currentY + 16);
+      doc.text(state.temas.map(t => t.codigo).join(", "), 140, currentY + 24);
+
+      currentY += 40;
+
+      /* Tabla de Competencias */
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9.5);
+      doc.setTextColor(12, 35, 64);
+      doc.text("RESULTADOS POR COMPETENCIA EVALUADA", 14, currentY);
+      currentY += 3;
+
+      doc.autoTable({
+        startY: currentY,
+        head: [["Tema / Competencia Evaluada", "Pts. Obtenidos", "Pts. Máximos", "% Cumplimiento"]],
+        body: summaryRows,
+        foot: [["TOTAL PONDERADO EVALUADO", grandObtained, grandMax, grandPct + "%"]],
+        headStyles: {
+          fillColor: pantoneRGB,
+          textColor: 255,
+          fontSize: 8,
+          halign: "center",
+          fontStyle: "bold"
+        },
+        bodyStyles: {
+          fontSize: 8.5,
+          textColor: [31, 41, 55]
+        },
+        footStyles: {
+          fillColor: [19, 115, 51],
+          textColor: 255,
+          fontStyle: "bold",
+          fontSize: 8.5
+        },
+        columnStyles: {
+          0: { halign: "left", cellWidth: 104 },
+          1: { halign: "center", cellWidth: 26 },
+          2: { halign: "center", cellWidth: 26 },
+          3: { halign: "center", cellWidth: 26 }
+        },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        margin: { left: 14, right: 14 }
+      });
+
+      currentY = doc.lastAutoTable.finalY + 8;
+
+      /* Insignia Concepto */
+      const nivelColorRGB = {
+        "concept-avanzado": [22, 101, 52],
+        "concept-intermedio": [133, 77, 14],
+        "concept-refuerzo": [153, 27, 27]
+      }[nivel.css] || pantoneRGB;
+
+      doc.setFillColor(...nivelColorRGB);
+      doc.roundedRect(14, currentY, 182, 11, 2, 2, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.text(
+        "CONCEPTO FINAL: " + nivel.label + "   (" + grandPct + "% — " + grandObtained + " / " + grandMax + " puntos)",
+        105, currentY + 7, { align: "center" }
+      );
+
+      currentY += 18;
+
+      /* Observaciones */
+      if (currentY < 230) {
+        doc.setTextColor(12, 35, 64);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.text("OBSERVACIONES GENERALES", 14, currentY);
+        currentY += 3;
+
+        doc.setDrawColor(209, 213, 219);
+        doc.setLineWidth(0.4);
+        doc.line(14, currentY, 196, currentY);
+        currentY += 4;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+        doc.setTextColor(51, 65, 85);
+        const splitObs = doc.splitTextToSize(observaciones, 180);
+        doc.text(splitObs, 14, currentY);
+        currentY += (splitObs.length * 4.5) + 14;
+
+        if (currentY < 265) {
+          doc.setDrawColor(156, 163, 175);
+          doc.setLineWidth(0.4);
+          doc.line(14, currentY + 8, 84, currentY + 8);
+          doc.setFontSize(7.5);
+          doc.setTextColor(100, 116, 139);
+          doc.text("Firma de Quien Evalúa", 14, currentY + 13);
+
+          doc.line(126, currentY + 8, 196, currentY + 8);
+          doc.text("Fecha", 126, currentY + 13);
+        }
+      }
+
+      /* Página 2: Detalle */
+      doc.addPage();
+      currentY = 16;
+
+      doc.setTextColor(12, 35, 64);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9.5);
+      doc.text("DETALLE DE CALIFICACIÓN POR EJERCICIO", 14, currentY);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(100, 116, 139);
+      doc.text("Candidato: " + nombreCandidato + "  ·  Cargo: " + cargoAspira + "  ·  Fecha: " + fechaAplicacion, 14, currentY + 5);
+
+      currentY += 9;
+
+      doc.autoTable({
+        startY: currentY,
+        head: [["Tema", "Ejercicio / Criterio Evaluado", "Tipo", "Pts.", "Máx."]],
+        body: detailRows,
+        headStyles: {
+          fillColor: pantoneRGB,
+          textColor: 255,
+          fontSize: 7.5,
+          fontStyle: "bold"
+        },
+        bodyStyles: {
+          fontSize: 7.5,
+          textColor: [51, 65, 85]
+        },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: {
+          0: { halign: "center", cellWidth: 14 },
+          1: { halign: "left", cellWidth: 116 },
+          2: { halign: "center", cellWidth: 22 },
+          3: { halign: "center", cellWidth: 15 },
+          4: { halign: "center", cellWidth: 15 }
+        },
+        didParseCell: function(data) {
+          if (data.section === "body" && data.column.index === 2 && data.cell.raw === "Manual") {
+            data.cell.styles.fillColor = [254, 243, 199];
+            data.cell.styles.textColor = [146, 64, 14];
+            data.cell.styles.fontStyle = "bold";
+          }
+        },
+        margin: { left: 14, right: 14 }
+      });
+
+      const pageCount = doc.getNumberOfPages();
+      for (let p = 1; p <= pageCount; p++) {
+        doc.setPage(p);
+        doc.setFontSize(7);
+        doc.setTextColor(148, 163, 184);
+        doc.text(
+          "Grupo La Conchita — Informe de Evaluación de Excel — Página " + p + " de " + pageCount,
+          105, 290, { align: "center" }
+        );
+      }
+
+      const safeCandidato = nombreCandidato.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_\-]/g, "");
+      const isoDate = new Date().toISOString().split("T")[0];
+      doc.save("Informe_Evaluacion_Excel_" + safeCandidato + "_" + isoDate + ".pdf");
+    }
+
+    function resetApp() {
+      document.getElementById("panel").style.display = "none";
+      document.getElementById("loading").style.display = "none";
+      dropZone.style.display = "block";
+      fileInput.value = "";
+
+      document.getElementById("inputCandidato").value = "";
+      document.getElementById("inputCorreo").value = "";
+      document.getElementById("inputCargo").value = "";
+      document.getElementById("inputEvaluador").value = "";
+      document.getElementById("observacionesGenerales").value = "";
+      document.getElementById("topicsContainer").innerHTML = "";
+      document.getElementById("summaryBody").innerHTML = "";
+      document.getElementById("summaryFoot").innerHTML = "";
+
+      state.candidateName = "";
+      state.temas = [];
+      state.temasAplicados = [];
+    }
+  </script>
 </body>
 </html>
-
