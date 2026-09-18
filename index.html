@@ -4,13 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Evaluación de Prueba de Conocimiento de Excel — Grupo La Conchita</title>
-
-  <!-- ExcelJS: Lectura de archivos Excel en el cliente -->
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-  <!-- jsPDF + AutoTable: Generación de informes PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-
   <style>
     :root {
       --header-bg: #eaf1f9;
@@ -26,22 +22,9 @@
       --green-dark: #137333;
       --white: #ffffff;
     }
-
-    *, *::before, *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
-      background: var(--accent-gray);
-      color: var(--text-dark);
-      line-height: 1.5;
-      min-height: 100vh;
-    }
-
-    /* Cabecera con contraste suave para el logo */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; background: var(--accent-gray); color: var(--text-dark); line-height: 1.5; min-height: 100vh; }
+    
     .header-bar {
       background: var(--header-bg);
       color: var(--pantone-blue);
@@ -52,451 +35,87 @@
       border-bottom: 2px solid #cbd5e1;
       box-shadow: 0 1px 4px rgba(0,0,0,0.06);
     }
-
-    .header-titles h1 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      color: var(--pantone-blue);
-      margin-bottom: 2px;
-    }
-
-    .header-titles h2 {
-      font-size: 0.92rem;
-      font-weight: 600;
-      color: #334155;
-      text-transform: uppercase;
-    }
-
-    .header-titles .org-name {
-      font-size: 0.85rem;
-      font-weight: 500;
-      color: #64748b;
-      margin-top: 2px;
-    }
-
-    .header-logo img {
-      max-height: 58px;
-      max-width: 185px;
-      object-fit: contain;
-    }
-
-    .container {
-      max-width: 1100px;
-      margin: 26px auto;
-      padding: 0 20px 40px;
-    }
-
-    /* Zona de carga */
-    #dropZone {
-      background: var(--white);
-      border: 2px dashed var(--border-color);
-      border-radius: 8px;
-      padding: 46px 24px;
-      text-align: center;
-      cursor: pointer;
-      transition: border-color 0.2s, background 0.2s;
-    }
-
-    #dropZone:hover, #dropZone.drag-over {
-      border-color: var(--pantone-blue);
-      background: #f8fafc;
-    }
-
-    #dropZone h3 {
-      font-size: 1.05rem;
-      color: var(--pantone-blue);
-      font-weight: 600;
-      margin-bottom: 6px;
-    }
-
-    #dropZone p {
-      color: var(--text-muted);
-      font-size: 0.9rem;
-    }
-
-    .btn-file-select {
-      display: inline-block;
-      margin-top: 16px;
-      padding: 8px 20px;
-      background: var(--pantone-blue);
-      color: var(--white);
-      border-radius: 4px;
-      font-size: 0.88rem;
-      font-weight: 600;
-      border: none;
-      cursor: pointer;
-    }
-
-    .btn-file-select:hover {
-      background: var(--pantone-blue-light);
-    }
-
+    .header-titles h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--pantone-blue); margin-bottom: 2px; }
+    .header-titles h2 { font-size: 0.92rem; font-weight: 600; color: #334155; text-transform: uppercase; }
+    .header-titles .org-name { font-size: 0.85rem; font-weight: 500; color: #64748b; margin-top: 2px; }
+    .header-logo img { max-height: 58px; max-width: 185px; object-fit: contain; }
+    
+    .container { max-width: 1100px; margin: 26px auto; padding: 0 20px 40px; }
+    
+    #dropZone { background: var(--white); border: 2px dashed var(--border-color); border-radius: 8px; padding: 46px 24px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+    #dropZone:hover, #dropZone.drag-over { border-color: var(--pantone-blue); background: #f8fafc; }
+    #dropZone h3 { font-size: 1.05rem; color: var(--pantone-blue); font-weight: 600; margin-bottom: 6px; }
+    #dropZone p { color: var(--text-muted); font-size: 0.9rem; }
+    .btn-file-select { display: inline-block; margin-top: 16px; padding: 8px 20px; background: var(--pantone-blue); color: var(--white); border-radius: 4px; font-size: 0.88rem; font-weight: 600; border: none; cursor: pointer; }
+    .btn-file-select:hover { background: var(--pantone-blue-light); }
     #fileInput { display: none; }
-
-    #loading {
-      display: none;
-      text-align: center;
-      padding: 50px 0;
-    }
-
-    .spinner {
-      width: 42px;
-      height: 42px;
-      border: 4px solid #e2e8f0;
-      border-top-color: var(--pantone-blue);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 12px;
-    }
-
+    
+    #loading { display: none; text-align: center; padding: 50px 0; }
+    .spinner { width: 42px; height: 42px; border: 4px solid #e2e8f0; border-top-color: var(--pantone-blue); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
     @keyframes spin { to { transform: rotate(360deg); } }
-
+    
     #panel { display: none; }
-
-    .instruction-banner {
-      background: #fffbeb;
-      border-left: 4px solid var(--yellow-border);
-      padding: 12px 18px;
-      border-radius: 4px;
-      font-size: 0.9rem;
-      color: #92400e;
-      font-weight: 600;
-      margin-bottom: 20px;
-    }
-
-    .candidate-card {
-      background: var(--white);
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      padding: 20px;
-      margin-bottom: 22px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-
-    .candidate-card-title {
-      font-size: 0.92rem;
-      font-weight: 700;
-      color: var(--pantone-blue);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 14px;
-      border-bottom: 1px solid var(--border-color);
-      padding-bottom: 6px;
-    }
-
-    .grid-fields {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-    }
-
-    .field-group {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .field-group label {
-      font-size: 0.78rem;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      margin-bottom: 4px;
-    }
-
-    .field-group input {
-      padding: 7px 10px;
-      border: 1px solid var(--border-color);
-      border-radius: 4px;
-      font-size: 0.9rem;
-      color: var(--text-dark);
-      background: #ffffff;
-      outline: none;
-    }
-
-    .field-group input:focus {
-      border-color: var(--pantone-blue);
-    }
-
-    .field-group .static-text {
-      padding: 7px 0;
-      font-size: 0.88rem;
-      font-weight: 600;
-      color: var(--text-dark);
-      word-break: break-word;
-    }
-
-    .topic-card {
-      background: var(--white);
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      margin-bottom: 18px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      overflow: hidden;
-    }
-
-    .topic-header {
-      background: var(--pantone-blue);
-      color: var(--white);
-      padding: 10px 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .topic-header h3 {
-      font-size: 0.9rem;
-      font-weight: 600;
-      letter-spacing: 0.3px;
-    }
-
-    .topic-score-badge {
-      font-size: 0.82rem;
-      font-weight: 700;
-      background: var(--pantone-blue-light);
-      padding: 2px 10px;
-      border-radius: 12px;
-    }
-
-    .exercise-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.86rem;
-    }
-
-    .exercise-table th, .exercise-table td {
-      padding: 9px 14px;
-      border-bottom: 1px solid #f1f5f9;
-      text-align: left;
-    }
-
-    .exercise-table th {
-      background: #f8fafc;
-      color: var(--text-muted);
-      font-weight: 600;
-      font-size: 0.76rem;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-    }
-
-    .exercise-table td:not(:first-child), .exercise-table th:not(:first-child) {
-      text-align: center;
-    }
-
+    .instruction-banner { background: #fffbeb; border-left: 4px solid var(--yellow-border); padding: 12px 18px; border-radius: 4px; font-size: 0.9rem; color: #92400e; font-weight: 600; margin-bottom: 20px; }
+    
+    .candidate-card { background: var(--white); border: 1px solid var(--border-color); border-radius: 6px; padding: 20px; margin-bottom: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .candidate-card-title { font-size: 0.92rem; font-weight: 700; color: var(--pantone-blue); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
+    .grid-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+    .field-group { display: flex; flex-direction: column; }
+    .field-group label { font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+    .field-group input { padding: 7px 10px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.9rem; color: var(--text-dark); background: #ffffff; outline: none; }
+    .field-group input:focus { border-color: var(--pantone-blue); }
+    .field-group .static-text { padding: 7px 0; font-size: 0.86rem; font-weight: 600; color: var(--text-dark); word-break: break-word; line-height: 1.4; }
+    
+    .topic-card { background: var(--white); border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden; }
+    .topic-header { background: var(--pantone-blue); color: var(--white); padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; }
+    .topic-header h3 { font-size: 0.9rem; font-weight: 600; letter-spacing: 0.3px; }
+    .topic-score-badge { font-size: 0.82rem; font-weight: 700; background: var(--pantone-blue-light); padding: 2px 10px; border-radius: 12px; }
+    
+    .exercise-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+    .exercise-table th, .exercise-table td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; text-align: left; }
+    .exercise-table th { background: #f8fafc; color: var(--text-muted); font-weight: 600; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.4px; }
+    .exercise-table td:not(:first-child), .exercise-table th:not(:first-child) { text-align: center; }
     .row-auto td { background: var(--white); }
     .row-manual td { background: var(--yellow-manual); }
     .row-manual td:first-child { border-left: 3px solid var(--yellow-border); }
-    .row-total td {
-      background: var(--green-total);
-      font-weight: 700;
-      color: var(--green-dark);
-      border-top: 2px solid #b7e1cd;
-    }
-
-    .tag-auto {
-      font-size: 0.75rem;
-      padding: 2px 8px;
-      background: #e2e8f0;
-      color: #334155;
-      border-radius: 4px;
-      font-weight: 600;
-    }
-
-    .tag-manual {
-      font-size: 0.75rem;
-      padding: 2px 8px;
-      background: #fef3c7;
-      color: #92400e;
-      border-radius: 4px;
-      font-weight: 600;
-    }
-
-    .input-manual-score {
-      width: 60px;
-      padding: 4px 6px;
-      border: 1px solid var(--yellow-border);
-      border-radius: 4px;
-      background: var(--white);
-      text-align: center;
-      font-weight: 700;
-      font-size: 0.9rem;
-      color: var(--text-dark);
-      outline: none;
-    }
-
-    .input-manual-score:focus {
-      border-color: var(--pantone-blue);
-    }
-
-    .summary-card {
-      background: var(--white);
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      margin-top: 24px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      overflow: hidden;
-    }
-
-    .summary-title {
-      background: var(--pantone-blue);
-      color: var(--white);
-      padding: 12px 18px;
-      font-size: 0.92rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-    }
-
-    .summary-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.88rem;
-    }
-
-    .summary-table th {
-      background: #f8fafc;
-      padding: 10px 16px;
-      color: var(--text-muted);
-      font-size: 0.76rem;
-      text-transform: uppercase;
-      font-weight: 600;
-      text-align: center;
-    }
-
+    .row-total td { background: var(--green-total); font-weight: 700; color: var(--green-dark); border-top: 2px solid #b7e1cd; }
+    
+    .tag-auto { font-size: 0.75rem; padding: 2px 8px; background: #e2e8f0; color: #334155; border-radius: 4px; font-weight: 600; }
+    .tag-manual { font-size: 0.75rem; padding: 2px 8px; background: #fef3c7; color: #92400e; border-radius: 4px; font-weight: 600; }
+    .input-manual-score { width: 60px; padding: 4px 6px; border: 1px solid var(--yellow-border); border-radius: 4px; background: var(--white); text-align: center; font-weight: 700; font-size: 0.9rem; color: var(--text-dark); outline: none; }
+    .input-manual-score:focus { border-color: var(--pantone-blue); }
+    
+    .summary-card { background: var(--white); border: 1px solid var(--border-color); border-radius: 6px; margin-top: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden; }
+    .summary-title { background: var(--pantone-blue); color: var(--white); padding: 12px 18px; font-size: 0.92rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+    .summary-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    .summary-table th { background: #f8fafc; padding: 10px 16px; color: var(--text-muted); font-size: 0.76rem; text-transform: uppercase; font-weight: 600; text-align: center; }
     .summary-table th:first-child { text-align: left; }
-
-    .summary-table td {
-      padding: 10px 16px;
-      border-bottom: 1px solid #f1f5f9;
-      text-align: center;
-    }
-
-    .summary-table td:first-child {
-      text-align: left;
-      font-weight: 600;
-    }
-
-    .summary-table .summary-total-row td {
-      background: var(--green-total);
-      font-weight: 700;
-      color: var(--green-dark);
-      border-top: 2px solid #b7e1cd;
-    }
-
-    .concept-box {
-      background: var(--white);
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      padding: 16px 20px;
-      margin-top: 14px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-
-    .concept-title {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--pantone-blue);
-      text-transform: uppercase;
-    }
-
-    .concept-badge {
-      padding: 5px 16px;
-      border-radius: 4px;
-      font-weight: 700;
-      font-size: 0.88rem;
-    }
-
+    .summary-table td { padding: 10px 16px; border-bottom: 1px solid #f1f5f9; text-align: center; }
+    .summary-table td:first-child { text-align: left; font-weight: 600; }
+    .summary-table .summary-total-row td { background: var(--green-total); font-weight: 700; color: var(--green-dark); border-top: 2px solid #b7e1cd; }
+    
+    .concept-box { background: var(--white); border: 1px solid var(--border-color); border-radius: 6px; padding: 16px 20px; margin-top: 14px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .concept-title { font-size: 0.9rem; font-weight: 700; color: var(--pantone-blue); text-transform: uppercase; }
+    .concept-badge { padding: 5px 16px; border-radius: 4px; font-weight: 700; font-size: 0.88rem; }
     .concept-avanzado { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
     .concept-intermedio { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
     .concept-refuerzo { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
-
-    .concept-details {
-      color: var(--text-muted);
-      font-size: 0.88rem;
-    }
-
-    .observations-card {
-      background: var(--white);
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      padding: 18px 20px;
-      margin-top: 16px;
-    }
-
-    .observations-card h4 {
-      font-size: 0.88rem;
-      font-weight: 700;
-      color: var(--pantone-blue);
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      margin-bottom: 10px;
-    }
-
-    .observations-card textarea {
-      width: 100%;
-      min-height: 90px;
-      padding: 10px;
-      border: 1px solid var(--border-color);
-      border-radius: 4px;
-      font-family: inherit;
-      font-size: 0.88rem;
-      color: var(--text-dark);
-      outline: none;
-      resize: vertical;
-    }
-
-    .observations-card textarea:focus {
-      border-color: var(--pantone-blue);
-    }
-
-    .action-buttons {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 24px;
-      gap: 14px;
-      flex-wrap: wrap;
-    }
-
-    .btn-action {
-      padding: 10px 24px;
-      border-radius: 4px;
-      font-size: 0.9rem;
-      font-weight: 700;
-      cursor: pointer;
-      border: none;
-      transition: background 0.2s;
-    }
-
-    .btn-reset {
-      background: var(--white);
-      color: var(--pantone-blue);
-      border: 1px solid var(--pantone-blue);
-    }
-
+    .concept-details { color: var(--text-muted); font-size: 0.88rem; }
+    
+    .observations-card { background: var(--white); border: 1px solid var(--border-color); border-radius: 6px; padding: 18px 20px; margin-top: 16px; }
+    .observations-card h4 { font-size: 0.88rem; font-weight: 700; color: var(--pantone-blue); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 10px; }
+    .observations-card textarea { width: 100%; min-height: 90px; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; font-family: inherit; font-size: 0.88rem; color: var(--text-dark); outline: none; resize: vertical; }
+    .observations-card textarea:focus { border-color: var(--pantone-blue); }
+    
+    .action-buttons { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; gap: 14px; flex-wrap: wrap; }
+    .btn-action { padding: 10px 24px; border-radius: 4px; font-size: 0.9rem; font-weight: 700; cursor: pointer; border: none; transition: background 0.2s; }
+    .btn-reset { background: var(--white); color: var(--pantone-blue); border: 1px solid var(--pantone-blue); }
     .btn-reset:hover { background: #f1f5f9; }
-
-    .btn-generate-pdf {
-      background: var(--pantone-blue);
-      color: var(--white);
-    }
-
-    .btn-generate-pdf:hover {
-      background: var(--pantone-blue-light);
-    }
-
+    .btn-generate-pdf { background: var(--pantone-blue); color: var(--white); }
+    .btn-generate-pdf:hover { background: var(--pantone-blue-light); }
+    
     @media (max-width: 768px) {
-      .header-bar {
-        flex-direction: column;
-        text-align: center;
-        gap: 12px;
-        padding: 16px 20px;
-      }
+      .header-bar { flex-direction: column; text-align: center; gap: 12px; padding: 16px 20px; }
       .grid-fields { grid-template-columns: 1fr; }
     }
   </style>
@@ -517,7 +136,7 @@
   <div class="container">
 
     <div id="dropZone" onclick="document.getElementById('fileInput').click()">
-      <h3>Adjuntar Archivo</h3>
+      <h3>Adjuntar Archivo de Prueba</h3>
       <p>Arrastre o haga clic para adjuntar el archivo que desea evaluar. Admite solo formatos de Excel</p>
       <button type="button" class="btn-file-select">Seleccionar Archivo (.xlsx)</button>
       <input type="file" id="fileInput" accept=".xlsx" />
@@ -534,7 +153,6 @@
         Diligencie únicamente los campos resaltados en amarillo para completar su evaluación
       </div>
 
-      <!-- Ficha de Datos de la Evaluación -->
       <div class="candidate-card">
         <div class="candidate-card-title">Datos del Candidato y Evaluación</div>
         <div class="grid-fields">
@@ -618,24 +236,36 @@
       { min: 0.00, label: "REQUIERE REFUERZO", css: "concept-refuerzo" }
     ];
 
-    // Leer parámetros de la URL para auto-completar datos desde n8n / Supabase
-    function populateFromUrlParams() {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("candidato") || params.get("nombre")) {
-        document.getElementById("inputCandidato").value = params.get("candidato") || params.get("nombre");
+    function getCleanUrlParam(params, keys) {
+      for (const k of keys) {
+        const val = params.get(k);
+        if (val) {
+          try {
+            return decodeURIComponent(val.replace(/\+/g, " "));
+          } catch(e) {
+            return val;
+          }
+        }
       }
-      if (params.get("correo") || params.get("email")) {
-        document.getElementById("inputCorreo").value = params.get("correo") || params.get("email");
-      }
-      if (params.get("cargo") || params.get("vacante")) {
-        document.getElementById("inputCargo").value = params.get("cargo") || params.get("vacante");
-      }
-      if (params.get("evaluador") || params.get("reclutador")) {
-        document.getElementById("inputEvaluador").value = params.get("evaluador") || params.get("reclutador");
-      }
+      return "";
     }
 
-    // Pre-cargar logo como DataURL para inserción limpia en PDF
+    function populateFromUrlParams() {
+      const params = new URLSearchParams(window.location.search);
+      
+      const candidato = getCleanUrlParam(params, ["candidato", "nombre", "nombre_candidato"]);
+      if (candidato) document.getElementById("inputCandidato").value = candidato;
+
+      const correo = getCleanUrlParam(params, ["correo", "email", "correo_candidato"]);
+      if (correo) document.getElementById("inputCorreo").value = correo;
+
+      const cargo = getCleanUrlParam(params, ["cargo", "vacante", "cargo_aspira"]);
+      if (cargo) document.getElementById("inputCargo").value = cargo;
+
+      const evaluador = getCleanUrlParam(params, ["evaluador", "reclutador", "quien_evalua", "correo_evaluador"]);
+      if (evaluador) document.getElementById("inputEvaluador").value = evaluador;
+    }
+
     let logoDataUrl = null;
     (function preloadLogo() {
       const img = new Image();
@@ -692,11 +322,22 @@
       document.getElementById("panel").style.display = "none";
 
       try {
+        if (!document.getElementById("inputCandidato").value.trim()) {
+          const rawName = file.name
+            .replace(/\.xlsx$/i, "")
+            .replace(/^Prueba_Excel_/i, "")
+            .replace(/^Prueba_/i, "")
+            .replace(/_/g, " ")
+            .trim();
+          if (rawName) {
+            document.getElementById("inputCandidato").value = rawName;
+          }
+        }
+
         const buffer = await file.arrayBuffer();
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.load(buffer);
 
-        // 1. Detectar temas aplicados según hojas visibles
         const visibleTemas = new Set();
         workbook.worksheets.forEach(ws => {
           const match = ws.name.toUpperCase().match(/H0([1-9])/);
@@ -706,7 +347,6 @@
         });
         state.temasAplicados = [...visibleTemas].sort();
 
-        // 2. Buscar hoja RESULTADOS
         const wsResultados = workbook.worksheets.find(ws =>
           ws.name.toLowerCase().includes("resultados")
         );
@@ -715,7 +355,6 @@
           throw new Error("No se encontró la hoja RESULTADOS en el archivo de Excel.");
         }
 
-        // 3. Parsear ejercicios
         state.temas = parseWorksheetResultados(wsResultados, visibleTemas);
 
         if (state.temas.length === 0) {
@@ -819,7 +458,6 @@
 
       document.getElementById("labelFecha").textContent = today;
       
-      // Mostrar nombres de los temas evaluados (no solo H0X)
       const skillsList = state.temas.map(t => t.nombre).join(" • ");
       document.getElementById("labelSkills").textContent = skillsList || "Ninguno especificado";
 
@@ -932,7 +570,6 @@
       const fechaAplicacion = document.getElementById("labelFecha").textContent;
       const observaciones = document.getElementById("observacionesGenerales").value.trim() || "Sin observaciones.";
 
-      // Fecha y hora exacta de generación
       const now = new Date();
       const fechaHoraGeneracion = now.toLocaleDateString("es-CO", {
         year: "numeric", month: "2-digit", day: "2-digit"
@@ -953,7 +590,6 @@
             : ej.ptAuto;
           topicObtained += score;
 
-          // En el PDF, ambos son texto normal uniforme
           detailRows.push([
             tema.codigo,
             ej.desc.length > 60 ? ej.desc.substring(0, 58) + "..." : ej.desc,
@@ -976,17 +612,17 @@
       const pantoneRGB = [12, 35, 64];
       const lightBlueRGB = [234, 241, 249];
 
-      /* Página 1: Cabecera con contraste suave y elegante */
+      /* Cabecera */
       doc.setFillColor(...lightBlueRGB);
-      doc.rect(0, 0, 210, 34, "F");
+      doc.rect(0, 0, 210, 32, "F");
 
       doc.setDrawColor(203, 213, 225);
       doc.setLineWidth(0.6);
-      doc.line(0, 34, 210, 34);
+      doc.line(0, 32, 210, 32);
 
       if (logoDataUrl) {
         try {
-          doc.addImage(logoDataUrl, "PNG", 14, 5, 38, 22);
+          doc.addImage(logoDataUrl, "PNG", 14, 5, 38, 20);
         } catch(e) {
           console.warn("Logo en PDF omitido:", e);
         }
@@ -1000,51 +636,58 @@
       doc.setFont("helvetica", "bold");
       doc.setFontSize(8.5);
       doc.setTextColor(51, 65, 85);
-      doc.text("Selección, Bienestar y Capacitación", logoDataUrl ? 58 : 105, 18, { align: logoDataUrl ? "left" : "center" });
+      doc.text("Selección, Bienestar y Capacitación", logoDataUrl ? 58 : 105, 17.5, { align: logoDataUrl ? "left" : "center" });
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
+      doc.setFontSize(7.8);
       doc.setTextColor(100, 116, 139);
-      doc.text("Grupo La Conchita", logoDataUrl ? 58 : 105, 24, { align: logoDataUrl ? "left" : "center" });
+      doc.text("Grupo La Conchita", logoDataUrl ? 58 : 105, 23, { align: logoDataUrl ? "left" : "center" });
 
-      // Fecha y hora en cabecera superior derecha
       doc.setFontSize(6.8);
       doc.setTextColor(100, 116, 139);
-      doc.text("Generado: " + fechaHoraGeneracion, 196, 30, { align: "right" });
+      doc.text("Generado: " + fechaHoraGeneracion, 196, 28, { align: "right" });
 
-      let currentY = 40;
+      let currentY = 38;
 
-      /* Tarjeta de Datos */
+      /* Tarjeta de Datos con Altura Dinámica */
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.8);
+      const skillsPdfText = state.temas.map(t => t.nombre).join(" • ");
+      const splitSkills = doc.splitTextToSize(skillsPdfText, 138);
+      
+      const skillsBlockHeight = Math.max(7, splitSkills.length * 3.6);
+      const cardHeight = 26 + skillsBlockHeight;
+
       doc.setFillColor(248, 250, 252);
       doc.setDrawColor(209, 213, 219);
-      doc.roundedRect(14, currentY, 182, 38, 2, 2, "FD");
+      doc.roundedRect(14, currentY, 182, cardHeight, 2, 2, "FD");
 
       doc.setTextColor(12, 35, 64);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(8);
 
       doc.text("Nombre Candidato:", 18, currentY + 7);
-      doc.text("Cargo al que Aspira:", 18, currentY + 15);
-      doc.text("Quién Evalúa:", 18, currentY + 23);
-      doc.text("Skills Evaluados:", 18, currentY + 31);
+      doc.text("Cargo al que Aspira:", 18, currentY + 14.5);
+      doc.text("Quién Evalúa:", 18, currentY + 22);
+      doc.text("Skills Evaluados:", 18, currentY + 29.5);
 
       doc.text("Correo Electrónico:", 110, currentY + 7);
-      doc.text("Fecha de Aplicación:", 110, currentY + 15);
+      doc.text("Fecha de Aplicación:", 110, currentY + 14.5);
 
       doc.setFont("helvetica", "normal");
       doc.setTextColor(51, 65, 85);
+      doc.setFontSize(8);
 
       doc.text(nombreCandidato, 48, currentY + 7);
-      doc.text(cargoAspira, 50, currentY + 15);
-      doc.text(quienEvalua, 42, currentY + 23);
-
-      const skillsPdfText = state.temas.map(t => t.nombre).join(", ");
-      const splitSkills = doc.splitTextToSize(skillsPdfText, 140);
-      doc.text(splitSkills, 45, currentY + 31);
+      doc.text(cargoAspira, 50, currentY + 14.5);
+      doc.text(quienEvalua, 42, currentY + 22);
 
       doc.text(correoElectronico, 142, currentY + 7);
-      doc.text(fechaAplicacion, 142, currentY + 15);
+      doc.text(fechaAplicacion, 142, currentY + 14.5);
 
-      currentY += 44;
+      doc.setFontSize(7.5);
+      doc.text(splitSkills, 45, currentY + 29.5);
+
+      currentY += cardHeight + 8;
 
       /* Tabla de Competencias */
       doc.setFont("helvetica", "bold");
@@ -1066,14 +709,14 @@
           fontStyle: "bold"
         },
         bodyStyles: {
-          fontSize: 8.5,
+          fontSize: 8.2,
           textColor: [31, 41, 55]
         },
         footStyles: {
           fillColor: [19, 115, 51],
           textColor: 255,
           fontStyle: "bold",
-          fontSize: 8.5
+          fontSize: 8.2
         },
         columnStyles: {
           0: { halign: "left", cellWidth: 104 },
@@ -1085,7 +728,7 @@
         margin: { left: 14, right: 14 }
       });
 
-      currentY = doc.lastAutoTable.finalY + 8;
+      currentY = doc.lastAutoTable.finalY + 7;
 
       /* Insignia Concepto */
       const nivelColorRGB = {
@@ -1095,47 +738,47 @@
       }[nivel.css] || pantoneRGB;
 
       doc.setFillColor(...nivelColorRGB);
-      doc.roundedRect(14, currentY, 182, 11, 2, 2, "F");
+      doc.roundedRect(14, currentY, 182, 10, 2, 2, "F");
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
+      doc.setFontSize(8.8);
       doc.text(
         "CONCEPTO FINAL: " + nivel.label + "   (" + grandPct + "% — " + grandObtained + " / " + grandMax + " puntos)",
-        105, currentY + 7, { align: "center" }
+        105, currentY + 6.5, { align: "center" }
       );
 
-      currentY += 18;
+      currentY += 16;
 
       /* Observaciones */
-      if (currentY < 230) {
+      if (currentY < 235) {
         doc.setTextColor(12, 35, 64);
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(9);
+        doc.setFontSize(8.8);
         doc.text("OBSERVACIONES GENERALES", 14, currentY);
-        currentY += 3;
+        currentY += 2.5;
 
         doc.setDrawColor(209, 213, 219);
         doc.setLineWidth(0.4);
         doc.line(14, currentY, 196, currentY);
-        currentY += 4;
+        currentY += 3.5;
 
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(8.5);
+        doc.setFontSize(8);
         doc.setTextColor(51, 65, 85);
         const splitObs = doc.splitTextToSize(observaciones, 180);
         doc.text(splitObs, 14, currentY);
-        currentY += (splitObs.length * 4.5) + 14;
+        currentY += (splitObs.length * 4) + 12;
 
         if (currentY < 265) {
           doc.setDrawColor(156, 163, 175);
           doc.setLineWidth(0.4);
           doc.line(14, currentY + 8, 84, currentY + 8);
-          doc.setFontSize(7.5);
+          doc.setFontSize(7.2);
           doc.setTextColor(100, 116, 139);
-          doc.text("Firma de Quien Evalúa", 14, currentY + 13);
+          doc.text("Firma de Quien Evalúa", 14, currentY + 12.5);
 
           doc.line(126, currentY + 8, 196, currentY + 8);
-          doc.text("Fecha", 126, currentY + 13);
+          doc.text("Fecha", 126, currentY + 12.5);
         }
       }
 
@@ -1155,7 +798,6 @@
 
       currentY += 9;
 
-      // Tabla sin colores amarillos en Manual (texto uniforme)
       doc.autoTable({
         startY: currentY,
         head: [["Tema", "Ejercicio / Criterio Evaluado", "Tipo", "Pts.", "Máx."]],
@@ -1181,7 +823,7 @@
         margin: { left: 14, right: 14 }
       });
 
-      /* Pie de página en todas las páginas */
+      /* Pie de página dinámico */
       const pageCount = doc.getNumberOfPages();
       for (let p = 1; p <= pageCount; p++) {
         doc.setPage(p);
