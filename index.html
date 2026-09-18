@@ -1,0 +1,490 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel de Calificacion - Prueba Excel</title>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    :root{--primary:#1a1a2e;--accent:#0f3460;--green:#2d6a4f;--green-light:#e8f5e9;--yellow:#fffde7;--yellow-bd:#e6a817;--red:#e63946;--text:#333;--muted:#666;--border:#dee2e6;--bg:#f4f6f9;--white:#fff}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+    .page-header{background:var(--primary);color:#fff;padding:18px 40px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+    .page-header .icon{font-size:2em}
+    .page-header h1{font-size:1.3em;font-weight:700}
+    .page-header p{font-size:.82em;opacity:.75;margin-top:2px}
+    .container{max-width:1120px;margin:0 auto;padding:30px 20px}
+    #dropZone{background:var(--white);border:3px dashed var(--accent);border-radius:14px;padding:56px 30px;text-align:center;cursor:pointer;transition:background .25s,border-color .25s}
+    #dropZone:hover,#dropZone.drag-over{background:#e8eeff;border-color:var(--red)}
+    #dropZone .dz-icon{font-size:3.5em;margin-bottom:12px}
+    #dropZone h2{color:var(--accent);font-size:1.2em;margin-bottom:8px}
+    #dropZone p{color:var(--muted);font-size:.9em}
+    #dropZone p.hint{margin-top:6px;font-size:.8em;color:#aaa}
+    #fileInput{display:none}
+    .btn-upload{display:inline-block;margin-top:18px;padding:10px 26px;background:var(--accent);color:#fff;border-radius:8px;font-weight:600;font-size:.95em;cursor:pointer;border:none}
+    .btn-upload:hover{background:var(--primary)}
+    #loading{display:none;text-align:center;padding:60px 20px}
+    .spinner{width:52px;height:52px;border:5px solid #e0e0e0;border-top-color:var(--accent);border-radius:50%;animation:spin .75s linear infinite;margin:0 auto 16px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    #panel{display:none}
+    .candidate-bar{background:var(--primary);color:#fff;border-radius:10px;padding:16px 24px;display:flex;align-items:center;gap:28px;margin-bottom:20px;flex-wrap:wrap}
+    .cbar-item{display:flex;flex-direction:column}
+    .cbar-label{font-size:.68em;opacity:.65;text-transform:uppercase;letter-spacing:1px}
+    .cbar-value{font-size:.97em;font-weight:600;margin-top:3px}
+    input.cbar-input{background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,.45);color:#fff;font-size:.97em;font-weight:600;outline:none;width:220px}
+    input.cbar-input::placeholder{color:rgba(255,255,255,.45)}
+    .alert-pending{background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px 16px;font-size:.86em;color:#856404;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+    .section-card{background:var(--white);border-radius:10px;margin-bottom:14px;box-shadow:0 2px 7px rgba(0,0,0,.07);border:1px solid var(--border);overflow:hidden}
+    .section-head{background:var(--primary);color:#fff;padding:11px 18px;display:flex;align-items:center;justify-content:space-between}
+    .section-head h3{font-size:.92em;font-weight:600}
+    .total-badge{background:var(--green);color:#fff;padding:3px 12px;border-radius:20px;font-size:.82em;font-weight:700;white-space:nowrap}
+    .ex-table{width:100%;border-collapse:collapse;font-size:.85em}
+    .ex-table thead tr{background:#f0f2f5;color:var(--muted);font-size:.75em;text-transform:uppercase;letter-spacing:.4px}
+    .ex-table th,.ex-table td{padding:9px 13px;border-bottom:1px solid #f0f0f0;text-align:left;vertical-align:middle}
+    .ex-table th:not(:first-child),.ex-table td:not(:first-child){text-align:center}
+    .ex-table th:first-child{width:46%}
+    .row-auto td{background:#fff}
+    .row-manual td{background:var(--yellow)}
+    .row-manual td:first-child{border-left:3px solid var(--yellow-bd)}
+    .row-total td{background:var(--green-light);font-weight:700;color:var(--green);border-top:2px solid #a5d6a7}
+    .badge{border-radius:12px;padding:2px 9px;font-size:.76em;font-weight:600}
+    .badge-auto{background:#e3f2fd;color:#1565c0}
+    .badge-manual{background:#fff3cd;color:#856404}
+    .manual-input{width:62px;padding:4px 6px;border:2px solid var(--yellow-bd);border-radius:6px;text-align:center;font-weight:700;font-size:.94em;background:#fffde7;outline:none;transition:border-color .2s}
+    .manual-input:focus{border-color:var(--accent);background:#fff}
+    .summary-card{background:var(--white);border-radius:10px;margin-top:22px;box-shadow:0 2px 7px rgba(0,0,0,.07);border:1px solid var(--border);overflow:hidden}
+    .summary-head{background:var(--primary);color:#fff;padding:13px 20px;font-weight:700;font-size:.95em;text-transform:uppercase;letter-spacing:.4px}
+    .sum-table{width:100%;border-collapse:collapse;font-size:.9em}
+    .sum-table th{background:#f0f2f5;padding:9px 16px;text-align:center;color:var(--muted);font-size:.77em;text-transform:uppercase}
+    .sum-table th:first-child{text-align:left}
+    .sum-table td{padding:9px 16px;border-bottom:1px solid #f0f0f0;text-align:center}
+    .sum-table td:first-child{text-align:left;font-weight:500}
+    .sum-table .foot-total td{background:var(--green-light);font-weight:700;color:var(--green);border-top:2px solid #a5d6a7}
+    .concepto-bar{display:flex;align-items:center;gap:14px;padding:14px 20px;flex-wrap:wrap}
+    .concepto-bar strong{color:var(--primary);font-size:.97em}
+    .nivel-pill{padding:5px 16px;border-radius:20px;font-weight:700;font-size:.88em}
+    .nivel-avanzado{background:#c8e6c9;color:#1b5e20}
+    .nivel-intermedio{background:#fff9c4;color:#f57f17}
+    .nivel-refuerzo{background:#ffcdd2;color:#b71c1c}
+    .concepto-pct{color:var(--muted);font-size:.88em}
+    .obs-box{background:var(--white);border-radius:10px;padding:20px 24px;margin-top:14px;box-shadow:0 2px 7px rgba(0,0,0,.07);border:1px solid var(--border)}
+    .obs-box h3{color:var(--primary);font-size:.9em;text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px}
+    .obs-box textarea{width:100%;min-height:90px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.9em;resize:vertical;outline:none;transition:border-color .2s;color:var(--text)}
+    .obs-box textarea:focus{border-color:var(--accent)}
+    .actions-bar{display:flex;align-items:center;justify-content:space-between;margin-top:22px;padding:4px 0 16px;flex-wrap:wrap;gap:12px}
+    .btn{padding:12px 28px;border-radius:8px;font-size:.95em;font-weight:700;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:8px;transition:transform .15s,background .2s}
+    .btn:hover{transform:translateY(-2px)}
+    .btn-reset{background:var(--white);color:var(--primary);border:2px solid var(--primary)}
+    .btn-reset:hover{background:var(--bg)}
+    .btn-pdf{background:var(--red);color:#fff;box-shadow:0 3px 10px rgba(230,57,70,.35)}
+    .btn-pdf:hover{background:#c1121f}
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <span class="icon">&#128202;</span>
+  <div>
+    <h1>Panel de Calificacion &mdash; Prueba Excel</h1>
+    <p>Carga el archivo resuelto del candidato &middot; Califica los items manuales &middot; Genera el informe PDF</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <div id="dropZone" onclick="document.getElementById('fileInput').click()">
+    <div class="dz-icon">&#128193;</div>
+    <h2>Carga el archivo Excel del candidato</h2>
+    <p>Arrastra el archivo aqui o haz clic para seleccionarlo</p>
+    <p class="hint">Solo archivos .xlsx &middot; El procesamiento ocurre en tu navegador, sin subir datos</p>
+    <span class="btn-upload">Seleccionar archivo</span>
+    <input type="file" id="fileInput" accept=".xlsx" />
+  </div>
+
+  <div id="loading">
+    <div class="spinner"></div>
+    <p style="color:var(--muted);">Procesando archivo Excel&hellip;</p>
+  </div>
+
+  <div id="panel">
+    <div class="candidate-bar">
+      <div class="cbar-item">
+        <span class="cbar-label">&#128100; Candidato</span>
+        <input class="cbar-input" id="candidateName" type="text" placeholder="Nombre del candidato" />
+      </div>
+      <div class="cbar-item">
+        <span class="cbar-label">&#128197; Fecha de evaluacion</span>
+        <span class="cbar-value" id="evalDate"></span>
+      </div>
+      <div class="cbar-item">
+        <span class="cbar-label">&#128203; Temas evaluados</span>
+        <span class="cbar-value" id="temasLabel"></span>
+      </div>
+    </div>
+
+    <div class="alert-pending" id="alertPending" style="display:none">
+      &#9888;&#65039;&nbsp; <span id="alertText"></span>
+    </div>
+
+    <div id="sectionsContainer"></div>
+
+    <div class="summary-card">
+      <div class="summary-head">&#128202; Resumen Consolidado de Calificacion por Tema</div>
+      <table class="sum-table">
+        <thead>
+          <tr>
+            <th>Tema / Competencia</th>
+            <th>Puntos Obtenidos</th>
+            <th>Puntos Maximos</th>
+            <th>% Cumplimiento</th>
+          </tr>
+        </thead>
+        <tbody id="summaryBody"></tbody>
+        <tfoot id="summaryFoot"></tfoot>
+      </table>
+    </div>
+
+    <div class="summary-card" style="margin-top:10px;">
+      <div class="concepto-bar">
+        <strong>CONCEPTO FINAL DEL CANDIDATO:</strong>
+        <span class="nivel-pill" id="nivelBadge"></span>
+        <span class="concepto-pct" id="nivelPct"></span>
+      </div>
+    </div>
+
+    <div class="obs-box">
+      <h3>&#128221; Observaciones Generales del Reclutador</h3>
+      <textarea id="observaciones" placeholder="Escribe aqui las observaciones generales sobre el desempeno del candidato..."></textarea>
+    </div>
+
+    <div class="actions-bar">
+      <button class="btn btn-reset" onclick="resetPanel()">&#128260; Cargar otro archivo</button>
+      <button class="btn btn-pdf" onclick="generarPDF()">&#128196; Generar Informe PDF</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+const state = { candidateName: '', temas: [], temasAplicados: [] };
+
+const NIVELES = [
+  { min: 0.90, label: 'AVANZADO (Dominio Avanzado)', css: 'nivel-avanzado' },
+  { min: 0.70, label: 'INTERMEDIO',                  css: 'nivel-intermedio' },
+  { min: 0,    label: 'REQUIERE REFUERZO',           css: 'nivel-refuerzo'  },
+];
+
+const dropZone  = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.name.endsWith('.xlsx')) processFile(f);
+  else alert('Por favor carga un archivo .xlsx valido.');
+});
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) processFile(fileInput.files[0]); });
+
+async function processFile(file) {
+  dropZone.style.display = 'none';
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('panel').style.display   = 'none';
+  try {
+    const rawName = file.name.replace(/\.xlsx$/i,'').replace(/^Prueba_Excel_/i,'').replace(/_/g,' ').trim();
+    state.candidateName = rawName || 'Candidato';
+
+    const buffer   = await file.arrayBuffer();
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer);
+
+    const temasSet = new Set();
+    workbook.worksheets.forEach(ws => {
+      const m = ws.name.toUpperCase().match(/H0([1-9])/);
+      if (m && ws.state === 'visible') temasSet.add('H0' + m[1]);
+    });
+    state.temasAplicados = [...temasSet].sort();
+
+    const wsR = workbook.worksheets.find(ws => ws.name.toLowerCase().includes('resultados'));
+    if (!wsR) throw new Error('No se encontro la hoja RESULTADOS en el archivo.');
+
+    state.temas = parseResultados(wsR, temasSet);
+    if (state.temas.length === 0) throw new Error('No se encontraron secciones de temas. Verifica que los encabezados tengan el formato "HOJA H01 - NOMBRE DEL TEMA".');
+
+    renderPanel();
+  } catch(err) {
+    console.error(err);
+    alert('Error al procesar el archivo:\n' + err.message);
+    resetPanel();
+  } finally {
+    document.getElementById('loading').style.display = 'none';
+  }
+}
+
+function parseResultados(ws, temasSet) {
+  const temas = [];
+  let cur = null, inSum = false;
+
+  ws.eachRow((row, rn) => {
+    if (rn < 3) return;
+    const tA = cText(row.getCell(1));
+    const tU = tA.toUpperCase();
+
+    if (tU.includes('RESUMEN CONSOLIDADO')) { inSum = true; return; }
+    if (inSum) return;
+
+    const hm = tU.match(/^HOJA\s+(H0[1-9])\s*[-\u2013\u2014]\s*(.+)/);
+    if (hm) {
+      const cod = hm[1], nom = hm[2].trim();
+      if (temasSet.size === 0 || temasSet.has(cod)) {
+        cur = { codigo: cod, nombre: nom, ejercicios: [] };
+        temas.push(cur);
+      } else { cur = null; }
+      return;
+    }
+    if (!cur) return;
+    if (tU.startsWith('TOTAL')) return;
+
+    const tC   = cText(row.getCell(3));
+    const ptMx = cNum(row.getCell(5));
+    if (tA.trim() === '') return;
+
+    const esManual = /evaluaci[o\u00f3]n\s+manual/i.test(tC);
+    const rm = tC.match(/\(0\s+a\s+(\d+)\)/i);
+    const rMax = rm ? parseInt(rm[1]) : ptMx;
+    const ptMax = Math.max(ptMx, rMax);
+    const ptAuto = esManual ? 0 : cNum(row.getCell(4));
+
+    cur.ejercicios.push({ desc: tA.trim(), colC: tC.trim(), ptAuto, ptMax, rangoMax: rMax > 0 ? rMax : ptMax, esManual });
+  });
+  return temas;
+}
+
+function cText(cell) {
+  if (!cell || cell.value == null) return '';
+  const v = cell.value;
+  if (typeof v === 'object') {
+    if ('result'   in v) return String(v.result ?? '');
+    if ('richText' in v) return v.richText.map(r => r.text).join('');
+    if ('text'     in v) return v.text ?? '';
+  }
+  return String(v);
+}
+function cNum(cell) {
+  if (!cell || cell.value == null) return 0;
+  const v = cell.value;
+  if (typeof v === 'object' && 'result' in v) return Number(v.result) || 0;
+  return Number(v) || 0;
+}
+
+function renderPanel() {
+  document.getElementById('candidateName').value = state.candidateName;
+  document.getElementById('evalDate').textContent = new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('temasLabel').textContent = state.temas.length + ' de 9  (' + state.temas.map(t=>t.codigo).join(', ') + ')';
+
+  const pending = state.temas.reduce((s,t) => s + t.ejercicios.filter(e=>e.esManual).length, 0);
+  if (pending > 0) {
+    document.getElementById('alertText').textContent = pending + ' item(s) requieren calificacion manual (fondo amarillo). Completa los puntajes antes de generar el PDF.';
+    document.getElementById('alertPending').style.display = 'flex';
+  }
+
+  document.getElementById('sectionsContainer').innerHTML = state.temas.map((t,i) => buildCard(t,i)).join('');
+  updateTotals();
+  document.getElementById('panel').style.display = 'block';
+}
+
+function buildCard(tema, tIdx) {
+  const maxTotal = tema.ejercicios.reduce((s,e) => s+e.ptMax, 0);
+  const rows = tema.ejercicios.map((ej, eIdx) => {
+    const rc     = ej.esManual ? 'row-manual' : 'row-auto';
+    const badge  = ej.esManual ? '<span class="badge badge-manual">&#9999;&#65039; Manual</span>' : '<span class="badge badge-auto">&#9889; Auto</span>';
+    const expCell= ej.esManual ? '<small style="color:#856404">'+ej.colC+'</small>' : '<small>'+(ej.colC||'&mdash;')+'</small>';
+    const ptsCell= ej.esManual ? '<input type="number" class="manual-input" id="inp-'+tIdx+'-'+eIdx+'" min="0" max="'+ej.rangoMax+'" value="0" oninput="validateInput(this,'+ej.rangoMax+')">' : '<strong>'+ej.ptAuto+'</strong>';
+    return '<tr class="'+rc+'"><td>'+ej.desc+'</td><td>'+badge+'</td><td>'+expCell+'</td><td>'+ptsCell+'</td><td>'+ej.ptMax+'</td></tr>';
+  }).join('');
+
+  return '<div class="section-card"><div class="section-head"><h3>&#128204; '+tema.codigo+' &mdash; '+tema.nombre+'</h3><span class="total-badge" id="badge-'+tIdx+'">0 / '+maxTotal+' pts</span></div><table class="ex-table"><thead><tr><th>Ejercicio / Criterio Evaluado</th><th style="width:11%">Tipo</th><th style="width:19%">Respuesta Esperada</th><th style="width:11%">Pts. Obtenidos</th><th style="width:9%">Pts. Max.</th></tr></thead><tbody>'+rows+'<tr class="row-total"><td colspan="3" style="text-align:right;padding-right:18px;">TOTAL '+tema.nombre+'</td><td id="ttl-'+tIdx+'">0</td><td>'+maxTotal+'</td></tr></tbody></table></div>';
+}
+
+function validateInput(input, max) {
+  let v = parseInt(input.value);
+  if (isNaN(v)||v<0) { input.value=0; } else if (v>max) { input.value=max; }
+  updateTotals();
+}
+
+function updateTotals() {
+  let gT=0, gM=0;
+  state.temas.forEach((tema,tIdx) => {
+    let tT=0;
+    const tM = tema.ejercicios.reduce((s,e)=>s+e.ptMax,0);
+    tema.ejercicios.forEach((ej,eIdx) => {
+      tT += ej.esManual ? (parseInt(document.getElementById('inp-'+tIdx+'-'+eIdx)?.value)||0) : ej.ptAuto;
+    });
+    gT+=tT; gM+=tM;
+    const b=document.getElementById('badge-'+tIdx); if(b) b.textContent=tT+' / '+tM+' pts';
+    const t=document.getElementById('ttl-'+tIdx);   if(t) t.textContent=tT;
+  });
+  renderSummary(gT,gM);
+}
+
+function renderSummary(gT, gM) {
+  document.getElementById('summaryBody').innerHTML = state.temas.map((tema,tIdx) => {
+    let tT=0, tM=tema.ejercicios.reduce((s,e)=>s+e.ptMax,0);
+    tema.ejercicios.forEach((ej,eIdx) => { tT += ej.esManual?(parseInt(document.getElementById('inp-'+tIdx+'-'+eIdx)?.value)||0):ej.ptAuto; });
+    const pct = tM>0?((tT/tM)*100).toFixed(1):'0.0';
+    return '<tr><td><strong>'+tema.codigo+'</strong> &mdash; '+tema.nombre+'</td><td>'+tT+'</td><td>'+tM+'</td><td>'+pct+'%</td></tr>';
+  }).join('');
+
+  const pct = gM>0?((gT/gM)*100).toFixed(1):'0.0';
+  document.getElementById('summaryFoot').innerHTML = '<tr class="foot-total"><td>TOTAL PONDERADO EVALUADO</td><td>'+gT+'</td><td>'+gM+'</td><td><strong>'+pct+'%</strong></td></tr>';
+
+  const ratio = gM>0?gT/gM:0;
+  const nivel = NIVELES.find(n=>ratio>=n.min) ?? NIVELES[NIVELES.length-1];
+  const badge = document.getElementById('nivelBadge');
+  badge.className = 'nivel-pill '+nivel.css;
+  badge.textContent = nivel.label;
+  document.getElementById('nivelPct').textContent = '('+pct+'% \u2014 '+gT+' / '+gM+' puntos)';
+}
+
+async function generarPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+
+  const candName  = document.getElementById('candidateName').value.trim() || 'Candidato';
+  const evalDate  = document.getElementById('evalDate').textContent;
+  const obs       = document.getElementById('observaciones').value.trim();
+
+  let gT=0, gM=0;
+  const resRows=[], detRows=[];
+
+  state.temas.forEach((tema,tIdx) => {
+    let tT=0, tM=tema.ejercicios.reduce((s,e)=>s+e.ptMax,0);
+    tema.ejercicios.forEach((ej,eIdx) => {
+      const pts = ej.esManual ? (parseInt(document.getElementById('inp-'+tIdx+'-'+eIdx)?.value)||0) : ej.ptAuto;
+      tT += pts;
+      detRows.push([tema.codigo, ej.desc.length>62?ej.desc.slice(0,59)+'...':ej.desc, ej.esManual?'Manual':'Automatico', pts, ej.ptMax]);
+    });
+    gT+=tT; gM+=tM;
+    const pct = tM>0?((tT/tM)*100).toFixed(1)+'%':'0.0%';
+    resRows.push([tema.codigo+' \u2014 '+tema.nombre, tT, tM, pct]);
+  });
+
+  const totalPct = gM>0?((gT/gM)*100).toFixed(1):'0.0';
+  const ratio    = gM>0?gT/gM:0;
+  const nivel    = NIVELES.find(n=>ratio>=n.min) ?? NIVELES[NIVELES.length-1];
+  const nColor   = {'nivel-avanzado':[45,106,79],'nivel-intermedio':[230,126,34],'nivel-refuerzo':[192,57,43]}[nivel.css];
+
+  let y = 0;
+
+  // Header
+  doc.setFillColor(26,26,46); doc.rect(0,0,210,30,'F');
+  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(13);
+  doc.text('INFORME DE EVALUACION \u2014 PRUEBA EXCEL', 105, 13, {align:'center'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+  doc.text('Area de Seleccion y Talento Humano', 105, 22, {align:'center'});
+  y = 38;
+
+  // Ficha candidato
+  doc.setFillColor(240,242,245); doc.roundedRect(14,y-5,182,26,2,2,'F');
+  doc.setTextColor(51,51,51); doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
+  doc.text('Candidato:',14+4,y+1); doc.text('Fecha:',14+4,y+9); doc.text('Temas evaluados:',14+4,y+17);
+  doc.setFont('helvetica','normal');
+  doc.text(candName,48,y+1); doc.text(evalDate,38,y+9);
+  doc.text(state.temas.map(t=>t.codigo).join(', '),56,y+17);
+  y += 32;
+
+  // Resumen por tema
+  doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(26,26,46);
+  doc.text('RESULTADOS POR COMPETENCIA EVALUADA', 14, y); y += 3;
+
+  doc.autoTable({
+    startY:y,
+    head:[['Competencia / Tema','Pts. Obtenidos','Pts. Maximos','% Cumplimiento']],
+    body:resRows,
+    foot:[['TOTAL PONDERADO EVALUADO', gT, gM, totalPct+'%']],
+    headStyles:{fillColor:[26,26,46],textColor:255,fontSize:8,halign:'center',fontStyle:'bold'},
+    bodyStyles:{fontSize:8.5,textColor:[51,51,51]},
+    footStyles:{fillColor:[45,106,79],textColor:255,fontStyle:'bold',fontSize:9},
+    columnStyles:{0:{halign:'left',cellWidth:104},1:{halign:'center',cellWidth:26},2:{halign:'center',cellWidth:26},3:{halign:'center',cellWidth:26}},
+    alternateRowStyles:{fillColor:[248,249,250]},
+    margin:{left:14,right:14},
+  });
+  y = doc.lastAutoTable.finalY + 8;
+
+  // Concepto final
+  doc.setFillColor(...nColor); doc.roundedRect(14,y,182,13,3,3,'F');
+  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9.5);
+  doc.text('Concepto Final: '+nivel.label+'   ('+totalPct+'% \u2014 '+gT+' / '+gM+' puntos)', 105, y+8.5, {align:'center'});
+  y += 20;
+
+  // Observaciones
+  if (y < 220) {
+    doc.setTextColor(26,26,46); doc.setFont('helvetica','bold'); doc.setFontSize(9.5);
+    doc.text('OBSERVACIONES GENERALES', 14, y); y += 4;
+    doc.setDrawColor(230,57,70); doc.setLineWidth(0.4); doc.line(14,y,196,y); y += 4;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(51,51,51);
+    const lines = doc.splitTextToSize(obs||'Sin observaciones adicionales.', 178);
+    doc.text(lines, 14, y); y += lines.length*4.8 + 14;
+    if (y < 255) {
+      doc.setDrawColor(150); doc.setLineWidth(0.4);
+      doc.line(14,y+14,84,y+14); doc.setFontSize(7.5); doc.setTextColor(120);
+      doc.text('Firma del Reclutador',14,y+19);
+      doc.line(126,y+14,196,y+14); doc.text('Fecha',126,y+19);
+    }
+  }
+
+  // Pagina 2: Detalle
+  doc.addPage(); y=18;
+  doc.setTextColor(26,26,46); doc.setFont('helvetica','bold'); doc.setFontSize(9.5);
+  doc.text('DETALLE DE CALIFICACION POR EJERCICIO', 14, y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(120);
+  doc.text('Candidato: '+candName+'  \u00b7  '+evalDate, 14, y+5); y+=10;
+
+  doc.autoTable({
+    startY:y,
+    head:[['Tema','Ejercicio / Criterio Evaluado','Tipo','Pts.','Max.']],
+    body:detRows,
+    headStyles:{fillColor:[26,26,46],textColor:255,fontSize:7.5,fontStyle:'bold'},
+    bodyStyles:{fontSize:7.5,textColor:[51,51,51]},
+    alternateRowStyles:{fillColor:[248,249,250]},
+    columnStyles:{0:{halign:'center',cellWidth:12},1:{halign:'left',cellWidth:118},2:{halign:'center',cellWidth:22},3:{halign:'center',cellWidth:13},4:{halign:'center',cellWidth:13}},
+    didParseCell: data => {
+      if (data.section==='body' && data.column.index===2 && data.cell.raw==='Manual') {
+        data.cell.styles.fillColor=[255,253,231]; data.cell.styles.textColor=[133,100,4]; data.cell.styles.fontStyle='bold';
+      }
+    },
+    margin:{left:14,right:14},
+  });
+
+  // Footer
+  const pc = doc.getNumberOfPages();
+  for (let p=1;p<=pc;p++) {
+    doc.setPage(p); doc.setFontSize(7); doc.setTextColor(160);
+    doc.text('Informe generado el '+new Date().toLocaleDateString('es-CO')+' \u2014 Pagina '+p+' de '+pc, 105, 290, {align:'center'});
+  }
+
+  const sn = candName.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_\-]/g,'');
+  doc.save('Informe_'+sn+'_'+new Date().toISOString().split('T')[0]+'.pdf');
+}
+
+function resetPanel() {
+  document.getElementById('panel').style.display = 'none';
+  document.getElementById('loading').style.display = 'none';
+  dropZone.style.display = 'block';
+  fileInput.value = '';
+  document.getElementById('sectionsContainer').innerHTML = '';
+  document.getElementById('summaryBody').innerHTML = '';
+  document.getElementById('summaryFoot').innerHTML = '';
+  document.getElementById('observaciones').value = '';
+  document.getElementById('alertPending').style.display = 'none';
+  state.candidateName=''; state.temas=[]; state.temasAplicados=[];
+}
+</script>
+</body>
+</html>
+
